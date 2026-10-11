@@ -1,0 +1,7 @@
+{
+  "model_id": "Ornith-1.5-35B-A3B",
+  "draft_model_hint": "Matching Ornith-1.5-35B-A3B-DFlash2 checkpoint",
+  "environment": {
+    "SGLANG_RF_PREFILL_COALESCE_QUIET_MS": "0"
+  }
+}

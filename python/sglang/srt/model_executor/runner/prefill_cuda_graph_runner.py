@@ -1,0 +1,1658 @@
+# Copyright 2023-2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+
+from __future__ import annotations
+
+import copy
+import inspect
+import logging
+from collections.abc import Sequence
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+
+import torch
+import tqdm
+
+from sglang.kernels.ops.kvcache.kv_indices import (
+    create_chunked_prefix_cache_kv_indices,
+)
+from sglang.srt.distributed.parallel_state import graph_capture
+from sglang.srt.layers.attention.dsa.utils import is_dsa_enable_prefill_cp
+from sglang.srt.layers.cp.bcg import (
+    PrefillCPBCGInput,
+)
+from sglang.srt.layers.cp.bcg import (
+    enable_cp_v2_bcg_capture as should_enable_cp_v2_bcg_capture,
+)
+from sglang.srt.layers.cp.bcg import (
+    execute_prefill_cp_bcg,
+    filter_prefill_cp_bcg_capture_num_tokens,
+)
+from sglang.srt.layers.cp.utils import is_cp_v2_active
+from sglang.srt.layers.dp_attention import (
+    DpPaddingMode,
+    set_dp_buffer_len,
+    set_is_extend_in_batch,
+)
+from sglang.srt.layers.logits_processor import LogitsProcessorOutput
+from sglang.srt.layers.pooler import EmbeddingPoolerOutput
+from sglang.srt.layers.utils.cp_utils import is_mla_prefill_cp_enabled
+from sglang.srt.model_executor.cuda_graph_buffer_registry import (
+    CudaGraphBufferRegistry,
+    build_prefill_registry,
+)
+from sglang.srt.model_executor.cuda_graph_config import Backend
+from sglang.srt.model_executor.forward_batch_info import (
+    CaptureHiddenMode,
+    ForwardBatch,
+    ForwardMode,
+    PPProxyTensors,
+    compute_local_num_token_non_padded,
+    enable_num_token_non_padded,
+)
+from sglang.srt.model_executor.forward_context import ForwardContext, forward_context
+from sglang.srt.model_executor.runner.base_cuda_graph_runner import (
+    BaseCudaGraphRunner,
+    freeze_gc,
+)
+from sglang.srt.model_executor.runner.shape_key import ShapeKey
+from sglang.srt.model_executor.runner_backend.breakable_cuda_graph_backend import (
+    BreakableCudaGraphBackend,
+)
+from sglang.srt.model_executor.runner_backend.full_cuda_graph_backend import (
+    FullCudaGraphBackend,
+)
+from sglang.srt.model_executor.runner_backend.utils import (
+    resolve_prefill_backend,
+)
+from sglang.srt.model_executor.runner_backend_utils import (
+    PREFILL_CUDA_GRAPH_CAPTURE_FAILED_MSG,
+)
+from sglang.srt.model_executor.runner_backend_utils.breakable_cuda_graph.context import (
+    BCG_FAILURE_HINT,
+)
+from sglang.srt.model_executor.runner_backend_utils.tc_piecewise_cuda_graph import (
+    TCPCG_FAILURE_HINT,
+    set_tc_piecewise_forward_context,
+)
+from sglang.srt.model_executor.runner_utils import (
+    maybe_publish_prefill_shared_read_done,
+)
+from sglang.srt.model_executor.runner_utils.buffers import (
+    PrefillInputBuffers,
+)
+from sglang.srt.model_loader.utils import resolve_language_model
+from sglang.srt.runtime_context import (
+    get_exec,
+    get_memory,
+    get_parallel,
+    get_schedule,
+)
+from sglang.srt.speculative.eagle_utils import get_draft_input_from_target_hidden_dim
+from sglang.srt.utils import (
+    get_available_gpu_memory,
+    is_cuda,
+    is_npu,
+    require_attn_tp_gather,
+    require_gathered_buffer,
+    require_mlp_tp_gather,
+)
+from sglang.srt.utils.aiter import maybe_pre_warm_aiter_chip_info
+
+if TYPE_CHECKING:
+    from sglang.srt.layers.attention.base_attn_backend import AttentionBackend
+    from sglang.srt.model_executor.model_runner import ModelRunner
+
+logger = logging.getLogger(__name__)
+
+
+_MAX_PREFILL_CUDA_GRAPH_PADDING_FACTOR = 2
+
+
+_CHUNKED_PREFIX_VARIANTS = (1, 2, 4, 8, 16)
+
+
+def _chunked_prefix_variant(num_chunks: int) -> str:
+    return f"chunked_prefix:{num_chunks}"
+
+
+def _ceil_div(a: int, b: int) -> int:
+    return -(-a // b)
+
+
+def _resolve_transformer_layer_model(model: torch.nn.Module) -> torch.nn.Module:
+
+    try:
+        layer_model = resolve_language_model(model)
+    except AttributeError:
+        layer_model = getattr(model, "language_model", model)
+
+    seen = set()
+    while not hasattr(layer_model, "layers") and hasattr(layer_model, "model"):
+        obj_id = id(layer_model)
+        if obj_id in seen:
+            break
+        seen.add(obj_id)
+        layer_model = layer_model.model
+
+    if not hasattr(layer_model, "layers"):
+        raise RuntimeError(
+            f"could not resolve inner layer_model on {type(model).__name__}; "
+            f"resolved to {type(layer_model).__name__} without layers."
+        )
+    return layer_model
+
+
+def _slice_output_rows(output: Any, num_tokens: int) -> Any:
+
+    if output is None:
+        return None
+    if torch.is_tensor(output) or isinstance(output, PPProxyTensors):
+        return output[:num_tokens]
+    if isinstance(output, tuple):
+        return tuple(_slice_output_rows(item, num_tokens) for item in output)
+    if isinstance(output, list):
+        return [_slice_output_rows(item, num_tokens) for item in output]
+    raise TypeError(f"Unsupported full prefill CUDA graph output: {type(output)}")
+
+
+@dataclass(frozen=True)
+class _ChunkedPrefixCaptureBuffers:
+
+
+    starts: torch.Tensor
+    seq_lens: torch.Tensor
+    cu_seq_lens: torch.Tensor
+    starts_cpu: torch.Tensor
+    seq_lens_cpu: torch.Tensor
+    kv_indices: torch.Tensor
+
+
+def prefill_failure_msg(backend_name: str) -> str:
+
+    if backend_name == Backend.BREAKABLE:
+        hint = BCG_FAILURE_HINT
+    elif backend_name == Backend.TC_PIECEWISE:
+        hint = TCPCG_FAILURE_HINT
+    else:
+        hint = (
+            "1. disable the prefill CUDA graph by --cuda-graph-backend-prefill=disabled\n"
+            "2. if it is an OOM problem, set --mem-fraction-static to a smaller value "
+            "(e.g., 0.8 or 0.7) or set --cuda-graph-max-bs-prefill to a smaller value "
+            "(e.g., 2048)\n"
+        )
+    return PREFILL_CUDA_GRAPH_CAPTURE_FAILED_MSG.format(
+        backend=backend_name, suggestions=hint
+    )
+
+
+_PREFILL_STATIC_FIELDS = (
+    "seq_lens",
+    "extend_seq_lens",
+    "extend_prefix_lens",
+    "extend_start_loc",
+    "req_pool_indices",
+    "orig_seq_lens",
+)
+
+
+class PrefillCudaGraphRunner(BaseCudaGraphRunner):
+
+
+    def __init__(self, model_runner: ModelRunner):
+        super().__init__(model_runner)
+
+        self.quant_config = getattr(model_runner.model, "quant_config", None)
+        self.is_multimodal = model_runner.model_config.is_multimodal
+        self.enable_lora = model_runner.lora_manager is not None
+
+
+        self.capture_return_pooled_hidden_states = not model_runner.is_generation
+
+
+        prefill_config = get_exec().graph.cuda_graph_config.prefill
+        self.prefill_backend_name = prefill_config.backend
+
+
+        capture_tokens = prefill_config.bs
+        assert capture_tokens is not None, "cuda_graph_config[prefill].bs is not set"
+        self.capture_num_tokens = sorted(capture_tokens)
+        assert self.capture_num_tokens, "cuda_graph_config[prefill].bs is empty"
+
+
+        self.max_num_tokens = max(self.capture_num_tokens)
+        self.max_bs = model_runner.req_to_token_pool.size
+
+
+        self.capture_forward_mode = ForwardMode.EXTEND
+
+
+        is_breakable_eagle = (
+            self.prefill_backend_name == Backend.BREAKABLE
+            and model_runner.spec_algorithm.is_eagle()
+        )
+        if is_breakable_eagle and model_runner.is_draft_worker:
+            self.capture_hidden_mode = CaptureHiddenMode.LAST
+        elif (
+            is_breakable_eagle
+            or model_runner.spec_algorithm.uses_dflash_drafter()
+        ):
+            self.capture_hidden_mode = CaptureHiddenMode.FULL
+        else:
+            self.capture_hidden_mode = self.return_hidden_states_mode
+
+        self.mamba_track_enabled = self._is_mamba_track_enabled()
+
+
+        input_embeds_hidden_size = self._input_embeds_hidden_size()
+        self.buffers: PrefillInputBuffers = PrefillInputBuffers.create(
+            device=self.device,
+            max_bs=self.max_bs,
+            max_num_tokens=self.max_num_tokens,
+            cache_loc_dtype=self._cache_loc_dtype(),
+            is_multimodal=self.is_multimodal,
+            hidden_size=input_embeds_hidden_size,
+            dtype=self.model_runner.dtype,
+            enable_mamba_track=self.mamba_track_enabled,
+        )
+        self.buffers.share_buffers()
+
+
+        self.buffer_registry: CudaGraphBufferRegistry = build_prefill_registry(
+            device=self.device,
+            max_bs=self.max_bs,
+            max_num_token=self.max_num_tokens,
+            cache_loc_dtype=self._cache_loc_dtype(),
+            is_multimodal=self.is_multimodal,
+            hidden_size=input_embeds_hidden_size,
+            embed_dtype=self.model_runner.dtype,
+            enable_mamba_track=self.mamba_track_enabled,
+            enable_num_token_non_padded=enable_num_token_non_padded(),
+            require_gathered_buffer=require_gathered_buffer(),
+            enable_prefill_cp=(
+                is_dsa_enable_prefill_cp() or is_mla_prefill_cp_enabled()
+            ),
+            source=self.buffers,
+        )
+
+        self.attention_layers = self.model_runner.attention_layers
+        self.mha_companion_layers = self.model_runner.mha_companion_layers
+        self.has_mha_companion_layers = any(
+            layer is not None for layer in self.mha_companion_layers
+        )
+        self.moe_layers = self.model_runner.moe_layers
+        self.moe_fusions = self.model_runner.moe_fusions
+        self.dsa_indexers = getattr(self.model_runner, "dsa_indexers", None)
+
+        self.dp_size = get_parallel().config.dp_size
+        self.require_mlp_tp_gather = require_mlp_tp_gather()
+        self.require_attn_tp_gather = require_attn_tp_gather()
+
+
+        self._prefill_static_buffers: Optional[Dict[str, torch.Tensor]] = None
+        self.static_draft_hidden_states: Optional[torch.Tensor] = None
+        self.layer_model = None
+        self._capture_req_slots = 1
+
+
+        self._is_full_backend = False
+
+        self._capture_lora = False
+        self.enable_cp_v2_bcg_capture = False
+        self.prefill_cp_bcg_input: Optional[PrefillCPBCGInput] = None
+
+
+        try:
+            self.backend = resolve_prefill_backend(self)
+        except RuntimeError as e:
+            if self.prefill_backend_name != Backend.TC_PIECEWISE:
+                raise
+            raise RuntimeError(
+                f"Capture prefill CUDA graph failed: {e}\n"
+                f"{prefill_failure_msg(self.prefill_backend_name)}"
+            ) from e
+
+        self._is_full_backend = isinstance(self.backend, FullCudaGraphBackend)
+        if self._is_full_backend:
+            max_req = prefill_config.full_prefill_max_req
+            assert max_req is not None, "full_prefill_max_req must be resolved"
+            self._capture_req_slots = max_req
+
+
+        self._capture_lora = self.enable_lora and isinstance(
+            self.backend, (BreakableCudaGraphBackend, FullCudaGraphBackend)
+        )
+        if self._capture_lora:
+            model_runner.lora_manager.init_prefill_cuda_graph_batch_info(
+                max_num_tokens=self.max_num_tokens
+            )
+
+
+            lora_max_bs = model_runner.lora_manager.prefill_cuda_graph_max_bs
+            if self._capture_req_slots > lora_max_bs:
+                logger.info(
+                    "Clamping full prefill CUDA graph request slots from %d to %d "
+                    "to fit the LoRA backend's static segment slots.",
+                    self._capture_req_slots,
+                    lora_max_bs,
+                )
+                self._capture_req_slots = lora_max_bs
+
+        self._full_cg_seq_lens_cpu = (
+            torch.zeros((self._capture_req_slots,), dtype=torch.int64, device="cpu")
+            if self._is_full_backend
+            else None
+        )
+
+
+        self._capture_chunked_prefix = (
+            self._is_full_backend and not get_schedule().disable_chunked_prefix_cache
+        )
+        self._prefix_chunk_len = 0
+        self._prefix_chunk_capacity = 0
+        self._prefix_max_len = 0
+        self._prefix_capture_variants: tuple[int, ...] = ()
+        self._prefix_capture_batches: Dict[ShapeKey, ForwardBatch] = {}
+        self._prefix_capture_buffers: Optional[_ChunkedPrefixCaptureBuffers] = None
+        if self._capture_chunked_prefix:
+            attn_backend = model_runner.attn_backend
+            assert attn_backend.supports_full_cuda_graph_chunked_prefix, (
+                f"{type(attn_backend).__name__} does not support chunked-prefix "
+                "Full prefill CUDA graphs"
+            )
+            prefix_config = get_exec().graph.cuda_graph_config.prefill
+            (
+                self._prefix_chunk_len,
+                self._prefix_chunk_capacity,
+            ) = self._resolve_prefix_chunk_shape(model_runner, self._capture_req_slots)
+            self._prefix_max_len = self._max_addressable_prefix_len(model_runner)
+            max_real_chunks = _ceil_div(self._prefix_max_len, self._prefix_chunk_len)
+
+
+            self._prefix_capture_variants = tuple(
+                n for n in _CHUNKED_PREFIX_VARIANTS if n // 2 < max_real_chunks
+            )
+            self._prefix_capture_buffers = self._create_chunked_prefix_buffers()
+            logger.info(
+                "Full prefill CUDA graph cached-prefix chunks: "
+                "%d aggregate tokens/chunk (%d/request x %d slots), "
+                "variants=%s (%s)",
+                self._prefix_chunk_capacity,
+                self._prefix_chunk_len,
+                self._capture_req_slots,
+                self._prefix_capture_variants,
+                (
+                    "configured"
+                    if prefix_config.full_prefill_prefix_chunk_tokens is not None
+                    else "auto from chunked_prefill_size"
+                ),
+            )
+        if isinstance(self.backend, (BreakableCudaGraphBackend, FullCudaGraphBackend)):
+            with torch.device(self.device):
+                self._prefill_static_buffers = {
+                    name: torch.zeros((self.max_bs,), dtype=torch.int64)
+                    for name in _PREFILL_STATIC_FIELDS
+                }
+
+        server_args = model_runner.server_args
+        self.enable_cp_v2_bcg_capture = isinstance(
+            self.backend, BreakableCudaGraphBackend
+        ) and should_enable_cp_v2_bcg_capture(server_args)
+        if self.enable_cp_v2_bcg_capture:
+            self.capture_num_tokens = filter_prefill_cp_bcg_capture_num_tokens(
+                self.capture_num_tokens, server_args
+            )
+            self.prefill_cp_bcg_input = PrefillCPBCGInput.create(self)
+
+
+        if (
+            isinstance(self.backend, BreakableCudaGraphBackend)
+            and model_runner.is_draft_worker
+            and model_runner.spec_algorithm.is_eagle()
+        ):
+            hidden_dim = get_draft_input_from_target_hidden_dim(model_runner)
+            with torch.device(self.device):
+                self.static_draft_hidden_states = torch.zeros(
+                    (self.max_num_tokens, hidden_dim),
+                    dtype=model_runner.dtype,
+                )
+
+
+        if isinstance(self.backend, BreakableCudaGraphBackend):
+            self.use_captured_attn_metadata = (
+                model_runner.attn_backend.use_captured_forward_metadata_for_breakable_cuda_graph
+            )
+        else:
+            self.use_captured_attn_metadata = False
+        self.attn_metadata_buffers: Optional[Dict[int, object]] = (
+            {} if self.use_captured_attn_metadata else None
+        )
+
+
+        if isinstance(self.backend, (BreakableCudaGraphBackend, FullCudaGraphBackend)):
+            try:
+                self.layer_model = _resolve_transformer_layer_model(
+                    self.model_runner.model
+                )
+            except RuntimeError as exc:
+                raise RuntimeError(
+                    f"{type(self.backend).__name__} {exc} This backend is "
+                    f"unsupported for this model architecture."
+                ) from exc
+            params = list(inspect.signature(self.layer_model.forward).parameters)
+            self._input_embeds_arg_idx = (
+                params.index("input_embeds") if "input_embeds" in params else None
+            )
+
+
+        maybe_pre_warm_aiter_chip_info()
+
+
+        self.device_module.synchronize()
+        self.model_runner.tp_group.barrier()
+        self.capture()
+
+        self.raw_num_tokens = 0
+        self.raw_bs = 0
+
+    def _is_mamba_track_enabled(self) -> bool:
+        return self.model_runner.server_args.enable_mamba_extra_buffer() and (
+            not get_memory().disable_radix_cache
+        )
+
+    def _cache_loc_dtype(self):
+        return torch.int64 if not is_npu() else torch.int32
+
+    def _input_embeds_hidden_size(self) -> int:
+
+        return getattr(
+            self.model_runner.model,
+            "input_embeds_hidden_size",
+            self.model_runner.model_config.hidden_size,
+        )
+
+    def _next_token_logits_buffer(self, rows: int) -> Optional[torch.Tensor]:
+        if not self.model_runner.pp_group.is_last_rank:
+            return None
+        graph_shared_output = self.model_runner.graph_shared_output
+
+        if graph_shared_output is None or rows > graph_shared_output.max_rows:
+            return None
+        return graph_shared_output.get_logits_buffer(
+            self.model_runner.model_config.vocab_size, rows=rows
+        )
+
+    def _uses_eager_prefill_tail(self) -> bool:
+        return self.prefill_backend_name in (Backend.BREAKABLE, Backend.FULL)
+
+    def _prefill_logits_buffer_rows(self, forward_batch: ForwardBatch) -> int:
+        if not forward_batch.return_logprob:
+            return forward_batch.batch_size
+        assert (
+            self._uses_eager_prefill_tail()
+        ), "Prefill return_logprob requires an eager logits tail."
+
+        global_num_tokens = forward_batch.global_num_tokens_for_logprob_cpu
+        if global_num_tokens is not None:
+            dp_rank = get_parallel().attn_dp_rank
+            return int(global_num_tokens[dp_rank if len(global_num_tokens) > 1 else 0])
+
+        return sum(
+            max(int(seq_len) - int(start_len), 1)
+            for start_len, seq_len in zip(
+                forward_batch.extend_logprob_start_lens_cpu,
+                forward_batch.extend_seq_lens_cpu,
+            )
+        )
+
+    def _capture_num_token_non_padded(self, num_tokens: int) -> Optional[torch.Tensor]:
+        if not self.buffer_registry.has_slot("num_token_non_padded"):
+            return None
+
+        buf = self.buffer_registry.get_slot("num_token_non_padded").buffer
+        buf.fill_(num_tokens)
+        if require_gathered_buffer():
+            local = compute_local_num_token_non_padded(
+                global_num_token_non_padded=buf,
+                num_tokens_per_dp=num_tokens,
+            )
+            buf.copy_(local)
+        return buf
+
+    def _get_layer_model_positions(self, forward_batch: ForwardBatch) -> torch.Tensor:
+
+        if forward_batch.mrope_positions is None:
+            return forward_batch.positions
+
+        model = self.model_runner.model
+        if getattr(model, "is_mrope_enabled", False):
+            return forward_batch.mrope_positions
+
+        language_model = getattr(model, "language_model", None)
+        if getattr(language_model, "is_mrope_enabled", False):
+            return forward_batch.mrope_positions
+
+        return forward_batch.positions
+
+    @contextmanager
+    def _prefill_forward_context(
+        self,
+        forward_batch: ForwardBatch,
+        *,
+        num_tokens: Optional[int] = None,
+        raw_num_tokens: Optional[int] = None,
+    ):
+        with (
+            forward_context(
+                ForwardContext(attn_backend=self.model_runner.attn_backend)
+            ),
+            set_tc_piecewise_forward_context(
+                forward_batch,
+                self.attention_layers,
+                self.quant_config,
+                self.moe_layers,
+                self.moe_fusions,
+                dsa_indexers=self.dsa_indexers,
+                mha_companion_layers=self.mha_companion_layers,
+                num_tokens=num_tokens,
+                raw_num_tokens=raw_num_tokens,
+                full_graph=self._is_full_backend,
+            ),
+        ):
+            yield
+
+    @torch.no_grad()
+    def _run_forward(self, forward_batch: ForwardBatch, num_tokens: int):
+
+        forward_batch.dp_local_start_pos = forward_batch.dp_local_num_tokens = None
+        set_dp_buffer_len(
+            forward_batch.global_dp_buffer_len,
+            num_tokens,
+            forward_batch.dp_padding_mode.is_max_len(),
+            forward_batch.global_num_tokens_cpu,
+        )
+        set_is_extend_in_batch(False)
+
+        with self._prefill_forward_context(forward_batch):
+            if self._uses_eager_prefill_tail():
+
+                positions = self._get_layer_model_positions(forward_batch)
+                return self.layer_model.forward(
+                    forward_batch.input_ids,
+                    positions,
+                    forward_batch,
+                    forward_batch.input_embeds,
+                )
+
+            return self.model_runner.model.forward(
+                forward_batch.input_ids,
+                forward_batch.positions,
+                forward_batch,
+            )
+
+    def _run_dummy_forward(self, num_tokens: int) -> None:
+
+        fb, attn_backend = self.capture_prepare(num_tokens)
+        attn_backend.init_forward_metadata(fb)
+        self._run_forward(fb, num_tokens)
+
+    def run_dummy_multimodal_deepstack_forward(
+        self, language_model: torch.nn.Module, num_tokens: int
+    ) -> bool:
+
+        if (
+            "input_deepstack_embeds"
+            not in inspect.signature(language_model.forward).parameters
+        ):
+            return False
+
+        num_deepstack = getattr(self.model_runner.model, "num_deepstack_embeddings", 0)
+        if num_deepstack <= 0:
+            return False
+
+        hidden_size = (
+            getattr(getattr(language_model, "config", None), "hidden_size", None)
+            or self.model_runner.model_config.hidden_size
+        )
+        fb, attn_backend = self.capture_prepare(num_tokens)
+        attn_backend.init_forward_metadata(fb)
+        deepstack_embeds = torch.zeros(
+            (num_tokens, hidden_size * num_deepstack),
+            dtype=self.model_runner.dtype,
+            device=self.device,
+        )
+        torch._dynamo.maybe_mark_dynamic(deepstack_embeds, 0)
+
+        fb.dp_local_start_pos = fb.dp_local_num_tokens = None
+        set_dp_buffer_len(
+            fb.global_dp_buffer_len,
+            num_tokens,
+            fb.dp_padding_mode.is_max_len(),
+            fb.global_num_tokens_cpu,
+        )
+        set_is_extend_in_batch(False)
+
+        with (
+            forward_context(
+                ForwardContext(attn_backend=self.model_runner.attn_backend)
+            ),
+            set_tc_piecewise_forward_context(
+                fb,
+                self.attention_layers,
+                self.quant_config,
+                self.moe_layers,
+                self.moe_fusions,
+                dsa_indexers=self.dsa_indexers,
+            ),
+        ):
+            language_model.forward(
+                fb.input_ids,
+                self._get_layer_model_positions(fb),
+                fb,
+                input_embeds=fb.input_embeds,
+                input_deepstack_embeds=deepstack_embeds,
+            )
+        return True
+
+    def _has_inactive_dp_rank(self, forward_batch: ForwardBatch) -> bool:
+
+
+        global_num_tokens = forward_batch.global_num_tokens_cpu
+        if global_num_tokens is None:
+            return False
+        return len(global_num_tokens) > 1 and any(
+            int(num_tokens) == 0 for num_tokens in global_num_tokens
+        )
+
+    @staticmethod
+    def _has_prefix_hit(forward_batch: ForwardBatch) -> bool:
+        prefix_lens = forward_batch.extend_prefix_lens_cpu
+        return prefix_lens is not None and any(
+            int(length) > 0 for length in prefix_lens
+        )
+
+    @staticmethod
+    def _max_addressable_prefix_len(model_runner) -> int:
+        table_width = model_runner.req_to_token_pool.req_to_token.shape[1]
+
+
+        configured_context = model_runner.model_config.context_len
+        return (
+            min(table_width, configured_context)
+            if configured_context is not None and configured_context > 0
+            else table_width
+        )
+
+    @staticmethod
+    def _resolve_prefix_chunk_shape(
+        model_runner, capture_req_slots: int
+    ) -> tuple[int, int]:
+
+        prefix_config = get_exec().graph.cuda_graph_config.prefill
+        requested_capacity = prefix_config.full_prefill_prefix_chunk_tokens
+        if requested_capacity is None:
+            requested_capacity = get_schedule().chunked_prefill_size
+            if requested_capacity is None or requested_capacity <= 0:
+                requested_capacity = prefix_config.max_bs
+        if requested_capacity is None or requested_capacity <= 0:
+            raise ValueError("full_prefill_prefix_chunk_tokens must be positive")
+        max_addressable_prefix_tokens = (
+            PrefillCudaGraphRunner._max_addressable_prefix_len(model_runner)
+            * capture_req_slots
+        )
+        requested_capacity = min(requested_capacity, max_addressable_prefix_tokens)
+
+
+        prefix_chunk_len = max(requested_capacity // capture_req_slots, 1)
+        return prefix_chunk_len, prefix_chunk_len * capture_req_slots
+
+    def _select_prefix_capture_chunks(
+        self, prefix_lens: Sequence[int]
+    ) -> Optional[int]:
+
+        max_prefix_len = max(int(length) for length in prefix_lens)
+        real_n = _ceil_div(max_prefix_len, self._prefix_chunk_len)
+        return next((n for n in self._prefix_capture_variants if n >= real_n), None)
+
+    def _has_uncapturable_chunked_prefix(
+        self, prefix_lens: Sequence[int] | None
+    ) -> bool:
+        return (
+            self._capture_chunked_prefix
+            and prefix_lens is not None
+            and any(int(length) > 0 for length in prefix_lens)
+            and self._select_prefix_capture_chunks(prefix_lens) is None
+        )
+
+    def _shape_key(self, num_tokens: int, forward_batch: ForwardBatch) -> ShapeKey:
+        variant = None
+        if self._capture_chunked_prefix and self._has_prefix_hit(forward_batch):
+            captured_n = self._select_prefix_capture_chunks(
+                forward_batch.extend_prefix_lens_cpu
+            )
+            assert captured_n is not None, "prefix batch has no captured FullCG variant"
+            variant = _chunked_prefix_variant(captured_n)
+        return ShapeKey(size=num_tokens, variant_label=variant)
+
+    def _create_chunked_prefix_buffers(self) -> _ChunkedPrefixCaptureBuffers:
+
+        max_chunks = max(self._prefix_capture_variants)
+        bs = self._capture_req_slots
+        starts_cpu = (
+            (torch.arange(max_chunks, dtype=torch.int32) * self._prefix_chunk_len)
+            .unsqueeze(1)
+            .repeat(1, bs)
+        )
+        return _ChunkedPrefixCaptureBuffers(
+            starts=starts_cpu.to(self.device, copy=True),
+            seq_lens=torch.zeros(
+                (max_chunks, bs), dtype=torch.int32, device=self.device
+            ),
+            cu_seq_lens=torch.zeros(
+                (max_chunks, bs + 1), dtype=torch.int32, device=self.device
+            ),
+            starts_cpu=starts_cpu,
+            seq_lens_cpu=torch.zeros((max_chunks, bs), dtype=torch.int32),
+            kv_indices=torch.zeros(
+                (max_chunks, self._prefix_chunk_capacity),
+                dtype=torch.int32,
+                device=self.device,
+            ),
+        )
+
+    def _prepare_chunked_prefix_capture(
+        self,
+        forward_batch: ForwardBatch,
+        shape_key: ShapeKey,
+        captured_n: int,
+    ) -> None:
+
+        assert self._prefill_static_buffers is not None
+        buffers = self._prefix_capture_buffers
+        assert buffers is not None
+        bs = self._capture_req_slots
+        prefix_len = min(self._prefix_chunk_len * captured_n, self._prefix_max_len)
+        prefix_lens_cpu = [prefix_len] * bs
+        self._prefill_static_buffers["extend_prefix_lens"][:bs].fill_(prefix_len)
+
+        self._populate_chunked_prefix_buffers(
+            captured_n=captured_n, prefix_lens_cpu=prefix_lens_cpu
+        )
+
+        forward_batch.extend_prefix_lens_cpu = prefix_lens_cpu
+        forward_batch.prefix_chunk_len = self._prefix_chunk_len
+        forward_batch.num_prefix_chunks = captured_n
+        forward_batch.prefix_chunk_idx = -1
+        forward_batch.prefix_chunk_starts = buffers.starts
+        forward_batch.prefix_chunk_starts_cpu = buffers.starts_cpu
+        forward_batch.prefix_chunk_seq_lens = buffers.seq_lens
+        forward_batch.prefix_chunk_seq_lens_cpu = buffers.seq_lens_cpu
+        forward_batch.prefix_chunk_cu_seq_lens = buffers.cu_seq_lens
+        forward_batch.prefix_chunk_max_seq_lens = [self._prefix_chunk_len] * captured_n
+
+
+        forward_batch.prefix_chunk_has_zero_kv = [True] * captured_n
+        forward_batch.prefix_chunk_num_tokens = [
+            self._prefix_chunk_capacity
+        ] * captured_n
+        forward_batch.prefix_chunk_kv_indices = list(
+            buffers.kv_indices[:captured_n].unbind(0)
+        )
+        self._prefix_capture_batches[shape_key] = forward_batch
+        self.model_runner.attn_backend.prepare_full_cuda_graph_chunked_prefix(
+            forward_batch, in_capture=True
+        )
+
+    def _populate_chunked_prefix_buffers(
+        self,
+        *,
+        captured_n: int,
+        prefix_lens_cpu: list[int],
+    ) -> None:
+
+        assert self._prefill_static_buffers is not None
+        buffers = self._prefix_capture_buffers
+        assert buffers is not None
+        bs = self._capture_req_slots
+        assert len(prefix_lens_cpu) == bs
+        real_n = _ceil_div(max(prefix_lens_cpu), self._prefix_chunk_len)
+        assert real_n <= captured_n
+
+
+        prefix_lens = torch.tensor(prefix_lens_cpu, dtype=torch.int32)
+        seq_lens = (prefix_lens - buffers.starts_cpu[:captured_n]).clamp(
+            min=0, max=self._prefix_chunk_len
+        )
+        cu_seq_lens = torch.zeros((captured_n, bs + 1), dtype=torch.int32)
+        cu_seq_lens[:, 1:] = seq_lens.cumsum(dim=1)
+        buffers.seq_lens_cpu[:captured_n].copy_(seq_lens)
+        buffers.seq_lens[:captured_n].copy_(seq_lens)
+        buffers.cu_seq_lens[:captured_n].copy_(cu_seq_lens)
+
+        req_to_token = self.model_runner.req_to_token_pool.req_to_token
+
+
+        req_pool_indices = self._prefill_static_buffers["req_pool_indices"][:bs]
+        buffers.kv_indices[:captured_n].zero_()
+        for chunk_idx in range(real_n):
+            create_chunked_prefix_cache_kv_indices[(bs,)](
+                req_to_token,
+                req_pool_indices,
+                buffers.starts[chunk_idx],
+                buffers.seq_lens[chunk_idx],
+                buffers.cu_seq_lens[chunk_idx],
+                buffers.kv_indices[chunk_idx],
+                req_to_token.shape[1],
+            )
+
+    def _prepare_chunked_prefix_replay(
+        self, shape_key: ShapeKey, forward_batch: ForwardBatch
+    ) -> None:
+
+        capture_batch = self._prefix_capture_batches[shape_key]
+        raw_bs = forward_batch.batch_size
+        prefix_lens_cpu = [
+            int(length) for length in forward_batch.extend_prefix_lens_cpu[:raw_bs]
+        ] + [0] * (self._capture_req_slots - raw_bs)
+
+        self._populate_chunked_prefix_buffers(
+            captured_n=capture_batch.num_prefix_chunks,
+            prefix_lens_cpu=prefix_lens_cpu,
+        )
+
+
+        capture_batch.extend_prefix_lens_cpu = prefix_lens_cpu
+        self.model_runner.attn_backend.prepare_full_cuda_graph_chunked_prefix(
+            capture_batch, in_capture=False
+        )
+
+    def _init_forward_metadata_for_capture(
+        self, forward_batch: ForwardBatch, num_tokens: int
+    ) -> None:
+
+        attn_backend = self.model_runner.attn_backend
+        if not self.use_captured_attn_metadata:
+            attn_backend.init_forward_metadata(forward_batch)
+            return
+        metadata = attn_backend.init_forward_metadata_for_breakable_cuda_graph_capture(
+            forward_batch
+        )
+        assert self.attn_metadata_buffers is not None
+        self.attn_metadata_buffers[num_tokens] = metadata
+
+    def _prepare_forward_metadata_for_replay(
+        self,
+        forward_batch: ForwardBatch,
+        static_forward_batch: ForwardBatch,
+        num_tokens: int,
+    ) -> None:
+
+        attn_backend = self.model_runner.attn_backend
+        if self._is_full_backend:
+
+
+            r = self._capture_req_slots
+            bs = forward_batch.batch_size
+            s = self._prefill_static_buffers
+            self._full_cg_seq_lens_cpu.zero_()
+            self._full_cg_seq_lens_cpu[:bs].copy_(forward_batch.seq_lens_cpu)
+            padded_view = copy.copy(forward_batch)
+            padded_view.batch_size = r
+            padded_view.seq_lens = s["seq_lens"][:r]
+            padded_view.seq_lens_cpu = self._full_cg_seq_lens_cpu
+            padded_view.req_pool_indices = s["req_pool_indices"][:r]
+            padded_view.extend_seq_lens = s["extend_seq_lens"][:r]
+            padded_view.extend_prefix_lens = s["extend_prefix_lens"][:r]
+            attn_backend.init_forward_metadata_out_graph(padded_view)
+            return
+        if not self.use_captured_attn_metadata:
+            attn_backend.init_forward_metadata(forward_batch)
+            return
+        assert self.attn_metadata_buffers is not None
+        metadata = self.attn_metadata_buffers[num_tokens]
+        attn_backend.prepare_forward_metadata_for_breakable_cuda_graph_replay(
+            metadata,
+            forward_batch,
+            static_forward_batch=static_forward_batch,
+        )
+
+    @staticmethod
+    def _restore_mha_capture_state(forward_batch: ForwardBatch) -> None:
+
+        forward_batch.mha_one_shot = True
+        forward_batch.mha_return_lse = False
+        forward_batch.set_attn_attend_prefix_cache(False)
+
+    def can_replay_locally(
+        self,
+        *,
+        batch_size: int,
+        num_tokens: Optional[int],
+        input_embeds,
+        replace_embeds,
+        prefix_lens,
+        is_target_verify: bool,
+        capture_hidden_mode,
+        return_logprob: bool,
+        lora_ineligible: bool = False,
+    ) -> bool:
+
+        if self._is_full_backend and batch_size > self._capture_req_slots:
+            return False
+
+
+        if lora_ineligible:
+            return False
+        if input_embeds is not None:
+            return False
+        if replace_embeds is not None:
+            return False
+
+        if (
+            self.prefill_backend_name == Backend.BREAKABLE
+            and self.has_mha_companion_layers
+            and not is_cuda()
+            and prefix_lens is not None
+            and any(prefix_lens)
+        ):
+            return False
+
+
+        if self._has_uncapturable_chunked_prefix(prefix_lens):
+            return False
+
+        if is_target_verify:
+            return False
+        if (
+            capture_hidden_mode is not None
+            and self.capture_hidden_mode < capture_hidden_mode
+        ):
+            return False
+        if return_logprob and not self._uses_eager_prefill_tail():
+            return False
+        if num_tokens is None:
+            return True
+        if num_tokens > self.max_num_tokens:
+            return False
+
+
+        padded_num_tokens = self._pad_to_bucket(num_tokens, self.capture_num_tokens)
+        if padded_num_tokens > num_tokens * _MAX_PREFILL_CUDA_GRAPH_PADDING_FACTOR:
+            return False
+        return True
+
+    def can_run_graph(self, forward_batch: ForwardBatch) -> bool:
+
+
+        if (
+            forward_batch.global_num_tokens_cpu is not None
+            and not forward_batch.can_run_dp_prefill_cuda_graph
+        ):
+            return False
+
+
+        if self._has_inactive_dp_rank(forward_batch):
+            return False
+
+
+        if not self.can_replay_locally(
+            batch_size=forward_batch.batch_size,
+            num_tokens=len(forward_batch.input_ids),
+            input_embeds=forward_batch.input_embeds,
+            replace_embeds=forward_batch.replace_embeds,
+            prefix_lens=forward_batch.extend_prefix_lens_cpu,
+            is_target_verify=forward_batch.forward_mode.is_target_verify(),
+            capture_hidden_mode=forward_batch.capture_hidden_mode,
+            return_logprob=forward_batch.return_logprob,
+            lora_ineligible=self.enable_lora
+            and not (
+                self._capture_lora
+                and self.model_runner.lora_manager.can_use_prefill_cuda_graph(
+                    forward_batch
+                )
+            ),
+        ):
+            return False
+        if getattr(self, "enable_cp_v2_bcg_capture", False) and is_cp_v2_active(
+            forward_batch
+        ):
+            assert self.prefill_cp_bcg_input is not None
+            if (
+                self.prefill_cp_bcg_input.select_replay_bucket_for_batch(
+                    num_tokens=len(forward_batch.input_ids),
+                    extend_seq_lens=forward_batch.extend_seq_lens_cpu,
+                    capture_num_tokens=self.capture_num_tokens,
+                    max_padding_factor=_MAX_PREFILL_CUDA_GRAPH_PADDING_FACTOR,
+                )
+                is None
+            ):
+                return False
+
+
+        return True
+
+    def _build_capture_spec_info(self, num_tokens: int):
+        if self.static_draft_hidden_states is None:
+            return None
+        from sglang.srt.speculative.eagle_info import EagleDraftInput
+
+        return EagleDraftInput(
+            hidden_states=self.static_draft_hidden_states[:num_tokens],
+        )
+
+    def capture_prepare(self, num_tokens: int) -> tuple[ForwardBatch, AttentionBackend]:
+
+        context_length = self.model_runner.model_config.context_len
+
+
+        capture_seq_lens = [
+            min(context_length, num_tokens - start)
+            for start in range(0, num_tokens, context_length)
+        ]
+        if self.prefill_backend_name == Backend.FULL:
+
+
+            capture_seq_lens += [0] * (self._capture_req_slots - len(capture_seq_lens))
+        bs = len(capture_seq_lens)
+        assert bs <= self.max_bs, (
+            f"Capture batch needs {bs} request slots for {num_tokens} tokens, "
+            f"but the request pool has only {self.max_bs}."
+        )
+        capture_start_locs = [0]
+        for seq_len in capture_seq_lens[:-1]:
+            capture_start_locs.append(capture_start_locs[-1] + seq_len)
+
+        with torch.device(self.device):
+            shape_inputs = {
+                "req_pool_indices": torch.arange(bs, device=self.device),
+                "seq_lens": torch.tensor(capture_seq_lens, device=self.device),
+                "orig_seq_lens": torch.tensor(capture_seq_lens, device=self.device),
+                "extend_seq_lens": torch.tensor(capture_seq_lens, device=self.device),
+                "extend_prefix_lens": torch.zeros((bs,), dtype=torch.int64),
+                "extend_start_loc": torch.tensor(
+                    capture_start_locs, device=self.device
+                ),
+            }
+        if self._prefill_static_buffers is not None:
+            s = self._prefill_static_buffers
+            s["seq_lens"][:bs].copy_(shape_inputs["seq_lens"])
+            s["extend_seq_lens"][:bs].copy_(shape_inputs["extend_seq_lens"])
+            s["extend_prefix_lens"][:bs].zero_()
+            s["extend_start_loc"][:bs].copy_(shape_inputs["extend_start_loc"])
+            s["req_pool_indices"][:bs].copy_(
+                torch.arange(bs, device=s["req_pool_indices"].device)
+            )
+            s["orig_seq_lens"][:bs].copy_(shape_inputs["orig_seq_lens"])
+            for name in _PREFILL_STATIC_FIELDS:
+                shape_inputs[name] = s[name][:bs]
+
+        registry = self.buffer_registry
+
+        def _slot(name):
+            return registry.get_slot(name).slice_for(bs, num_tokens)
+
+        if self.require_mlp_tp_gather:
+            global_num_tokens_cpu = [num_tokens] * self.dp_size
+        elif self.require_attn_tp_gather:
+            global_num_tokens_cpu = [num_tokens]
+        else:
+            global_num_tokens_cpu = None
+
+        if global_num_tokens_cpu is not None:
+            global_dp_buffer_len = sum(global_num_tokens_cpu)
+            num_tokens_tensor = torch.tensor(
+                global_num_tokens_cpu, dtype=torch.int32, device=self.device
+            )
+            global_num_tokens_gpu = num_tokens_tensor
+            global_num_tokens_for_logprob_gpu = num_tokens_tensor
+        else:
+            global_dp_buffer_len = None
+            global_num_tokens_gpu = None
+            global_num_tokens_for_logprob_gpu = None
+
+        with torch.device(self.device):
+            forward_batch = ForwardBatch(
+                forward_mode=ForwardMode.EXTEND,
+                batch_size=bs,
+                input_ids=_slot("input_ids"),
+                input_embeds=(
+                    _slot("input_embeds") if registry.has_slot("input_embeds") else None
+                ),
+                req_pool_indices=shape_inputs["req_pool_indices"],
+                seq_lens=shape_inputs["seq_lens"],
+                next_token_logits_buffer=self._next_token_logits_buffer(bs),
+                orig_seq_lens=shape_inputs["orig_seq_lens"],
+                seq_lens_cpu=torch.tensor(capture_seq_lens, device="cpu"),
+                out_cache_loc=_slot("out_cache_loc"),
+                seq_lens_sum=num_tokens,
+                mamba_track_indices=(
+                    _slot("mamba_track_indices")
+                    if registry.has_slot("mamba_track_indices")
+                    else None
+                ),
+                mamba_track_mask=(
+                    _slot("mamba_track_mask")
+                    if registry.has_slot("mamba_track_mask")
+                    else None
+                ),
+                mamba_track_seqlens=(
+                    _slot("mamba_track_seqlens")
+                    if registry.has_slot("mamba_track_seqlens")
+                    else None
+                ),
+                encoder_lens=None,
+                return_logprob=False,
+                extend_num_tokens=num_tokens,
+                extend_seq_lens=shape_inputs["extend_seq_lens"],
+                extend_prefix_lens=shape_inputs["extend_prefix_lens"],
+                extend_start_loc=shape_inputs["extend_start_loc"],
+                extend_prefix_lens_cpu=[0] * bs,
+                extend_seq_lens_cpu=list(capture_seq_lens),
+                extend_logprob_start_lens_cpu=list(capture_seq_lens),
+                positions=_slot("positions"),
+                global_num_tokens_gpu=global_num_tokens_gpu,
+                global_num_tokens_for_logprob_gpu=global_num_tokens_for_logprob_gpu,
+                global_num_tokens_cpu=global_num_tokens_cpu,
+                dp_padding_mode=DpPaddingMode.get_default_mode_in_cuda_graph(),
+                global_dp_buffer_len=global_dp_buffer_len,
+                mrope_positions=(
+                    _slot("mrope_positions")
+                    if registry.has_slot("mrope_positions")
+                    else None
+                ),
+                spec_algorithm=None,
+                spec_info=self._build_capture_spec_info(num_tokens),
+
+
+                capture_hidden_mode=self.capture_hidden_mode,
+                num_token_non_padded=self._capture_num_token_non_padded(num_tokens),
+                num_token_non_padded_cpu=num_tokens,
+                global_forward_mode=ForwardMode.EXTEND,
+
+
+                lora_ids=([None] * bs if self._capture_lora else None),
+                return_pooled_hidden_states=self.capture_return_pooled_hidden_states,
+            )
+            self.tbo_plugin.capture_one_batch_size(forward_batch, num_tokens=num_tokens)
+        return forward_batch, self.model_runner.attn_backend
+
+    def capture(self) -> None:
+
+
+        self.warmup()
+        with freeze_gc(self.model_runner.server_args.enable_cudagraph_gc):
+            with graph_capture() as graph_capture_context:
+                self.stream = graph_capture_context.stream
+                with self.backend.capture_session(self.stream):
+                    self._capture_one_stream()
+
+    def _capture_one_stream(self) -> None:
+        avail_mem = get_available_gpu_memory(
+            self.model_runner.device,
+            self.model_runner.gpu_id,
+            empty_cache=False,
+        )
+        capture_range = (
+            tqdm.tqdm(list(reversed(self.capture_num_tokens)))
+            if get_parallel().tp_rank == 0
+            else reversed(self.capture_num_tokens)
+        )
+        for num_tokens in capture_range:
+            if get_parallel().tp_rank == 0:
+                avail_mem = get_available_gpu_memory(
+                    self.model_runner.device,
+                    self.model_runner.gpu_id,
+                    empty_cache=False,
+                )
+                capture_range.set_description(
+                    f"Capturing num tokens ({num_tokens=} {avail_mem=:.2f} GB)"
+                )
+            self.capture_one_shape(num_tokens)
+            if self._capture_chunked_prefix:
+                for captured_n in self._prefix_capture_variants:
+                    self.capture_one_shape(num_tokens, prefix_num_chunks=captured_n)
+
+    def capture_one_shape(self, size: int, *, prefix_num_chunks: int = 0) -> None:
+
+        num_tokens = size
+        forward_batch, attn_backend = self.capture_prepare(num_tokens)
+        if self.enable_cp_v2_bcg_capture:
+            assert self.prefill_cp_bcg_input is not None
+            self.prefill_cp_bcg_input.prepare(
+                self,
+                forward_batch,
+                static_num_tokens=num_tokens,
+                capture=True,
+            )
+        if forward_batch.lora_ids is not None:
+
+
+            lora_manager = self.model_runner.lora_manager
+            assert lora_manager.can_use_prefill_cuda_graph(forward_batch), (
+                f"Capture batch (req slots {self._capture_req_slots}, bucket "
+                f"{num_tokens}) exceeds the LoRA backend's prefill CUDA graph "
+                "limits; the graph would read stale LoRA metadata at replay."
+            )
+            lora_manager.prepare_lora_batch(forward_batch)
+        shape_key = ShapeKey(
+            size=num_tokens,
+            variant_label=(
+                _chunked_prefix_variant(prefix_num_chunks)
+                if prefix_num_chunks
+                else None
+            ),
+        )
+        if prefix_num_chunks:
+            self._prepare_chunked_prefix_capture(
+                forward_batch, shape_key, prefix_num_chunks
+            )
+        if self._is_full_backend:
+            if not prefix_num_chunks:
+                attn_backend.init_forward_metadata_out_graph(
+                    forward_batch, in_capture=True
+                )
+
+
+        else:
+            self._init_forward_metadata_for_capture(forward_batch, num_tokens)
+
+        def run_once():
+            return self._run_forward(forward_batch, num_tokens)
+
+
+        if isinstance(self.backend, BreakableCudaGraphBackend):
+            post_warmup_hook = None
+        else:
+            post_warmup_hook = getattr(attn_backend, "on_after_cuda_graph_warmup", None)
+        self.backend.capture_one(
+            shape_key,
+            run_once,
+
+
+            capture_inputs=(
+                forward_batch
+                if forward_batch.global_num_tokens_gpu is not None
+                else None
+            ),
+            post_warmup_hook=post_warmup_hook,
+        )
+
+    def load_batch(self, forward_batch: ForwardBatch, **kwargs) -> ForwardBatch:
+
+        num_tokens = len(forward_batch.input_ids)
+        static_num_tokens = self._pad_to_bucket(num_tokens, self.capture_num_tokens)
+        if getattr(self, "enable_cp_v2_bcg_capture", False) and is_cp_v2_active(
+            forward_batch
+        ):
+            assert self.prefill_cp_bcg_input is not None
+            static_num_tokens = (
+                self.prefill_cp_bcg_input.select_replay_bucket_for_batch(
+                    num_tokens=num_tokens,
+                    extend_seq_lens=forward_batch.extend_seq_lens_cpu,
+                    capture_num_tokens=self.capture_num_tokens,
+                    max_padding_factor=_MAX_PREFILL_CUDA_GRAPH_PADDING_FACTOR,
+                )
+            )
+            if static_num_tokens is None:
+                raise RuntimeError(
+                    "Prefill CUDA graph replay was admitted without a fitting bucket"
+                )
+        self.raw_num_tokens = num_tokens
+
+        bs = forward_batch.batch_size
+        self.raw_bs = bs
+
+        self.buffer_registry.fill_from(
+            forward_batch,
+            raw_bs=bs,
+            padded_bs=bs,
+            raw_num_tokens=num_tokens,
+            padded_num_tokens=static_num_tokens,
+        )
+
+        registry = self.buffer_registry
+
+        def _slot(name):
+            return registry.get_slot(name).slice_for(bs, static_num_tokens)
+
+        mamba_track_indices = (
+            _slot("mamba_track_indices")
+            if registry.has_slot("mamba_track_indices")
+            else None
+        )
+        mamba_track_mask = (
+            _slot("mamba_track_mask") if registry.has_slot("mamba_track_mask") else None
+        )
+        mamba_track_seqlens = (
+            _slot("mamba_track_seqlens")
+            if registry.has_slot("mamba_track_seqlens")
+            else None
+        )
+
+        input_ids = _slot("input_ids")
+        input_embeds = (
+            _slot("input_embeds") if registry.has_slot("input_embeds") else None
+        )
+        positions = _slot("positions")
+        out_cache_loc = _slot("out_cache_loc")
+        mrope_positions = (
+            _slot("mrope_positions")
+            if registry.has_slot("mrope_positions")
+            and forward_batch.mrope_positions is not None
+            else None
+        )
+        num_token_non_padded = (
+            _slot("num_token_non_padded")
+            if registry.has_slot("num_token_non_padded")
+            else forward_batch.num_token_non_padded
+        )
+
+
+        pcg_forward_mode = (
+            ForwardMode.EXTEND
+            if forward_batch.forward_mode == ForwardMode.MIXED
+            else forward_batch.forward_mode
+        )
+        pcg_global_forward_mode = (
+            ForwardMode.EXTEND
+            if forward_batch.global_forward_mode == ForwardMode.MIXED
+            else forward_batch.global_forward_mode
+        )
+
+        static_forward_batch = ForwardBatch(
+            forward_mode=pcg_forward_mode,
+            batch_size=bs,
+            input_ids=input_ids,
+            input_embeds=input_embeds,
+            req_pool_indices=forward_batch.req_pool_indices,
+            seq_lens=forward_batch.seq_lens,
+            next_token_logits_buffer=self._next_token_logits_buffer(
+                self._prefill_logits_buffer_rows(forward_batch)
+            ),
+            orig_seq_lens=forward_batch.orig_seq_lens,
+            seq_lens_cpu=forward_batch.seq_lens_cpu,
+            out_cache_loc=out_cache_loc,
+            seq_lens_sum=forward_batch.seq_lens_sum,
+            mamba_track_indices=mamba_track_indices,
+            mamba_track_mask=mamba_track_mask,
+            mamba_track_seqlens=mamba_track_seqlens,
+            encoder_lens=forward_batch.encoder_lens,
+            return_logprob=(
+                forward_batch.return_logprob
+                if isinstance(self.backend, BreakableCudaGraphBackend)
+                else False
+            ),
+            is_prefill_only=forward_batch.is_prefill_only,
+            extend_seq_lens=forward_batch.extend_seq_lens,
+            extend_prefix_lens=forward_batch.extend_prefix_lens,
+            extend_start_loc=forward_batch.extend_start_loc,
+            extend_prefix_lens_cpu=forward_batch.extend_prefix_lens_cpu,
+            extend_seq_lens_cpu=forward_batch.extend_seq_lens_cpu,
+            extend_logprob_start_lens_cpu=forward_batch.extend_logprob_start_lens_cpu,
+            top_logprobs_nums=forward_batch.top_logprobs_nums,
+            token_ids_logprobs=forward_batch.token_ids_logprobs,
+            multi_item_delimiter_indices=forward_batch.multi_item_delimiter_indices,
+            extend_num_tokens=forward_batch.extend_num_tokens,
+            extend_input_logprob_token_ids_gpu=forward_batch.extend_input_logprob_token_ids_gpu,
+            positions=positions,
+            global_num_tokens_gpu=forward_batch.global_num_tokens_gpu,
+            global_num_tokens_for_logprob_gpu=forward_batch.global_num_tokens_for_logprob_gpu,
+            global_num_tokens_for_logprob_cpu=forward_batch.global_num_tokens_for_logprob_cpu,
+            dp_padding_mode=forward_batch.dp_padding_mode,
+            global_dp_buffer_len=forward_batch.global_dp_buffer_len,
+            mrope_positions=mrope_positions,
+            spec_algorithm=forward_batch.spec_algorithm,
+            spec_info=forward_batch.spec_info,
+            capture_hidden_mode=forward_batch.capture_hidden_mode,
+            num_token_non_padded=num_token_non_padded,
+            num_token_non_padded_cpu=forward_batch.num_token_non_padded_cpu,
+            global_forward_mode=pcg_global_forward_mode,
+            lora_ids=forward_batch.lora_ids,
+            sampling_info=forward_batch.sampling_info,
+            mm_inputs=forward_batch.mm_inputs,
+            temperature=forward_batch.temperature,
+            top_p=forward_batch.top_p,
+            dimensions=forward_batch.dimensions,
+            return_pooled_hidden_states=(
+                self.capture_return_pooled_hidden_states
+                or forward_batch.return_pooled_hidden_states
+            ),
+        )
+        if self._is_full_backend:
+            forward_batch.next_token_logits_buffer = (
+                static_forward_batch.next_token_logits_buffer
+            )
+
+        if (
+            isinstance(self.backend, BreakableCudaGraphBackend)
+            and self.has_mha_companion_layers
+            and not is_cuda()
+        ):
+            self._restore_mha_capture_state(static_forward_batch)
+
+
+        if self._prefill_static_buffers is not None:
+            bs = forward_batch.batch_size
+            s = self._prefill_static_buffers
+            s["seq_lens"][:bs].copy_(forward_batch.seq_lens)
+            s["extend_seq_lens"][:bs].copy_(forward_batch.extend_seq_lens)
+            s["extend_prefix_lens"][:bs].copy_(forward_batch.extend_prefix_lens)
+            s["extend_start_loc"][:bs].copy_(forward_batch.extend_start_loc)
+            s["req_pool_indices"][:bs].copy_(forward_batch.req_pool_indices)
+            if forward_batch.orig_seq_lens is not None:
+                s["orig_seq_lens"][:bs].copy_(forward_batch.orig_seq_lens)
+            if self._is_full_backend and bs < self._capture_req_slots:
+
+
+                r = self._capture_req_slots
+                s["seq_lens"][bs:r].zero_()
+                s["extend_seq_lens"][bs:r].zero_()
+                s["extend_prefix_lens"][bs:r].zero_()
+                s["extend_start_loc"][bs:r].fill_(self.raw_num_tokens)
+                s["req_pool_indices"][bs:r].zero_()
+                s["orig_seq_lens"][bs:r].zero_()
+
+
+                registry = self.buffer_registry
+                for name in ("mamba_track_mask", "mamba_track_indices"):
+                    if registry.has_slot(name):
+                        registry.get_slot(name).buffer[bs:r].zero_()
+
+
+        if (
+            self.static_draft_hidden_states is not None
+            and forward_batch.spec_info is not None
+        ):
+            self.static_draft_hidden_states[:num_tokens].copy_(
+                forward_batch.spec_info.hidden_states
+            )
+
+        metadata_forward_batch = forward_batch
+        if self.enable_cp_v2_bcg_capture:
+            assert self.prefill_cp_bcg_input is not None
+            self.prefill_cp_bcg_input.prepare(
+                self,
+                static_forward_batch,
+                static_num_tokens=static_num_tokens,
+                capture=False,
+            )
+            metadata_forward_batch = static_forward_batch
+
+        self._prepare_forward_metadata_for_replay(
+            metadata_forward_batch, static_forward_batch, static_num_tokens
+        )
+
+        return static_forward_batch
+
+    def _execute_body_capture(
+        self,
+        forward_batch: ForwardBatch,
+        static_forward_batch: ForwardBatch,
+        static_num_tokens: int,
+        raw_num_tokens: int,
+        shape_key: ShapeKey,
+        **kwargs,
+    ):
+
+
+        full_path = self._is_full_backend
+        ie_idx = self._input_embeds_arg_idx
+
+        def replay_layer_forward(*args, **layer_kwargs):
+
+
+            if self.buffer_registry.has_slot("input_embeds"):
+                ie = layer_kwargs.get("input_embeds")
+                if ie is None and ie_idx is not None and len(args) > ie_idx:
+                    ie = args[ie_idx]
+                if ie is not None:
+                    self.buffer_registry.get_slot("input_embeds").slice_for(
+                        1, static_num_tokens
+                    )[: ie.shape[0]].copy_(ie)
+            hs = self.backend.replay(shape_key, static_forward_batch, **kwargs)
+            return _slice_output_rows(hs, raw_num_tokens) if full_path else hs
+
+        original_layer_forward = self.layer_model.forward
+        self.layer_model.forward = replay_layer_forward
+
+
+        tail_batch = forward_batch if full_path else static_forward_batch
+        try:
+            with self._prefill_forward_context(
+                static_forward_batch,
+                num_tokens=static_num_tokens,
+                raw_num_tokens=raw_num_tokens,
+            ):
+                return self.model_runner.model.forward(
+                    tail_batch.input_ids,
+                    tail_batch.positions,
+                    tail_batch,
+                    **kwargs,
+                )
+        finally:
+            self.layer_model.forward = original_layer_forward
+
+    def _execute_tc_piecewise(
+        self,
+        static_forward_batch: ForwardBatch,
+        static_num_tokens: int,
+        raw_num_tokens: int,
+        **kwargs,
+    ):
+        with self._prefill_forward_context(
+            static_forward_batch,
+            num_tokens=static_num_tokens,
+            raw_num_tokens=raw_num_tokens,
+        ):
+            return self.backend.replay(
+                ShapeKey(size=static_num_tokens),
+                static_forward_batch,
+                **kwargs,
+            )
+
+    def _trim_logits_output(
+        self, output: LogitsProcessorOutput
+    ) -> LogitsProcessorOutput:
+
+        mm_input_embeds = None
+        if (
+            self.model_runner.spec_algorithm.is_speculative()
+            and output.mm_input_embeds is not None
+        ):
+            mm_input_embeds = output.mm_input_embeds[: self.raw_num_tokens]
+        logits_rows = self.raw_bs if self._is_full_backend else self.raw_num_tokens
+        return LogitsProcessorOutput(
+            next_token_logits=(
+                output.next_token_logits[:logits_rows]
+                if output.next_token_logits is not None
+                else None
+            ),
+            hidden_states=(
+                output.hidden_states[: self.raw_num_tokens]
+                if output.hidden_states is not None
+                else None
+            ),
+            input_token_logprobs=output.input_token_logprobs,
+            input_top_logprobs_val=output.input_top_logprobs_val,
+            input_top_logprobs_idx=output.input_top_logprobs_idx,
+            input_token_ids_logprobs_val=output.input_token_ids_logprobs_val,
+            input_token_ids_logprobs_idx=output.input_token_ids_logprobs_idx,
+            mm_input_embeds=mm_input_embeds,
+        )
+
+    def _finalize_execute_output(
+        self, output
+    ) -> Union[LogitsProcessorOutput, PPProxyTensors, EmbeddingPoolerOutput]:
+        if isinstance(output, LogitsProcessorOutput):
+            return self._trim_logits_output(output)
+        if isinstance(output, EmbeddingPoolerOutput):
+            return output
+        assert isinstance(output, PPProxyTensors)
+        raise NotImplementedError(
+            "PPProxyTensors is not supported in PrefillCudaGraphRunner yet."
+        )
+
+    def _validate_capture_hidden_mode(self, forward_batch: ForwardBatch) -> None:
+        if self.capture_hidden_mode < forward_batch.capture_hidden_mode:
+            raise RuntimeError(
+                "The runtime hidden-state mode exceeds the fixed CUDA graph "
+                f"capture mode ({self.capture_hidden_mode.name})."
+            )
+
+    def execute(
+        self, forward_batch: ForwardBatch, **kwargs
+    ) -> Union[LogitsProcessorOutput, PPProxyTensors, EmbeddingPoolerOutput]:
+        self._validate_capture_hidden_mode(forward_batch)
+        with self.backend.replay_session():
+            static_forward_batch = self.load_batch(forward_batch, **kwargs)
+            static_num_tokens = len(static_forward_batch.input_ids)
+            raw_num_tokens = self.raw_num_tokens
+            shape_key = self._shape_key(static_num_tokens, forward_batch)
+
+            if shape_key.variant_label is not None:
+                self._prepare_chunked_prefix_replay(shape_key, forward_batch)
+
+
+            maybe_publish_prefill_shared_read_done(
+                self.model_runner, forward_batch, self.device_module
+            )
+
+            if self.enable_cp_v2_bcg_capture:
+                output = execute_prefill_cp_bcg(
+                    self,
+                    forward_batch,
+                    static_forward_batch,
+                    static_num_tokens,
+                    raw_num_tokens,
+                    **kwargs,
+                )
+            elif self._uses_eager_prefill_tail():
+                output = self._execute_body_capture(
+                    forward_batch,
+                    static_forward_batch,
+                    static_num_tokens,
+                    raw_num_tokens,
+                    shape_key,
+                    **kwargs,
+                )
+            else:
+                output = self._execute_tc_piecewise(
+                    static_forward_batch,
+                    static_num_tokens,
+                    raw_num_tokens,
+                    **kwargs,
+                )
+            return self._finalize_execute_output(output)

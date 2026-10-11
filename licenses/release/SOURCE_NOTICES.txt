@@ -1,0 +1,3112 @@
+Original source notices for compiled and retained modules.
+The notices below are reproduced from the corresponding source files.
+Refer to LICENSE for the main license terms.
+
+Files:
+python/sglang/cli/serve.py
+python/sglang/cli/serve_backends.py
+python/sglang/kernels/ops/attention/fla/gdn_replayssm_spec_decode.py
+python/sglang/kernels/ops/attention/fla/gdn_replayssm_spec_fold.py
+python/sglang/kernels/ops/attention/fla/kda_replayssm_spec_decode.py
+python/sglang/kernels/ops/attention/linear/kda_ptx_prefill/__init__.py
+python/sglang/kernels/ops/attention/minimax_m3_qk_norm_rope.py
+python/sglang/kernels/ops/diffusion/activation/sana_conv_post_triton.py
+python/sglang/kernels/ops/diffusion/activation/silu_mul_bitexact.py
+python/sglang/kernels/ops/diffusion/common/numerics.py
+python/sglang/kernels/ops/diffusion/ext/hunyuan3d_rasterizer/__init__.py
+python/sglang/kernels/ops/diffusion/ext/mesh_processor/__init__.py
+python/sglang/kernels/ops/diffusion/layout/ulysses_qkv_triton.py
+python/sglang/kernels/ops/diffusion/layout/wan_causal_cache_triton.py
+python/sglang/kernels/ops/diffusion/modulate/indexed_modulation_triton.py
+python/sglang/kernels/ops/diffusion/modulate/wan_temb_table_slices_triton.py
+python/sglang/kernels/ops/diffusion/norm/group_norm_silu_twopass_triton.py
+python/sglang/kernels/ops/diffusion/norm/layernorm_modulate_triton.py
+python/sglang/kernels/ops/diffusion/norm/native_bf16_rmsnorm_triton.py
+python/sglang/kernels/ops/diffusion/norm/rmsnorm_scale_shift_bitexact.py
+python/sglang/kernels/ops/diffusion/norm/wan_rmsnorm_silu_triton.py
+python/sglang/kernels/ops/diffusion/norm/zimage_qk_rmsnorm_triton.py
+python/sglang/kernels/ops/diffusion/rope/hunyuan_qkv_pack_triton.py
+python/sglang/kernels/ops/diffusion/rope/rope_rotate_half_bitexact.py
+python/sglang/kernels/ops/diffusion/sites/hunyuan_qknorm_site.py
+python/sglang/kernels/ops/layernorm/minimax_m3_rmsnorm.py
+python/sglang/kernels/ops/moe/expert_pack_mxfp4.py
+python/sglang/kernels/ops/moe/minimax_m3_swiglu.py
+python/sglang/kernels/ops/quantization/mxfp8_amd_gfx95.py
+python/sglang/srt/arg_groups/expert_pack_hook.py
+python/sglang/srt/configs/cohere2_moe.py
+python/sglang/srt/configs/minimax_vl.py
+python/sglang/srt/connector/__init__.py
+python/sglang/srt/connector/azure.py
+python/sglang/srt/connector/base_connector.py
+python/sglang/srt/connector/redis.py
+python/sglang/srt/connector/remote_instance.py
+python/sglang/srt/connector/s3.py
+python/sglang/srt/connector/serde/__init__.py
+python/sglang/srt/connector/serde/safe_serde.py
+python/sglang/srt/connector/serde/serde.py
+python/sglang/srt/connector/utils.py
+python/sglang/srt/distributed/device_communicators/quick_all_reduce.py
+python/sglang/srt/distributed/device_communicators/triton_symm_mem_ag.py
+python/sglang/srt/entrypoints/search/exa_client.py
+python/sglang/srt/entrypoints/tool.py
+python/sglang/srt/hardware_backend/cpu/quantization/awq_kernels.py
+python/sglang/srt/hardware_backend/cpu/quantization/gptq_kernels.py
+python/sglang/srt/hardware_backend/xpu/quantization/__init__.py
+python/sglang/srt/hardware_backend/xpu/quantization/awq_kernels.py
+python/sglang/srt/hardware_backend/xpu/quantization/gptq_kernels.py
+python/sglang/srt/hardware_backend/xpu/quantization/int4pack_utils.py
+python/sglang/srt/layers/attention/dual_chunk_flashattention_backend.py
+python/sglang/srt/layers/attention/linear/kernels/kda_nvidia.py
+python/sglang/srt/layers/attention/linear/kernels/kda_ptx.py
+python/sglang/srt/layers/moe/cutlass_w4a8_moe.py
+python/sglang/srt/layers/moe/expert_pack.py
+python/sglang/srt/layers/moe/kt_ep_wrapper.py
+python/sglang/srt/layers/quantization/auto_round.py
+python/sglang/srt/layers/quantization/awq/__init__.py
+python/sglang/srt/layers/quantization/awq/awq.py
+python/sglang/srt/layers/quantization/awq/schemes/__init__.py
+python/sglang/srt/layers/quantization/awq/schemes/awq_cpu.py
+python/sglang/srt/layers/quantization/awq/schemes/awq_linear.py
+python/sglang/srt/layers/quantization/awq/schemes/awq_marlin.py
+python/sglang/srt/layers/quantization/awq/schemes/awq_moe.py
+python/sglang/srt/layers/quantization/awq/schemes/awq_scheme.py
+python/sglang/srt/layers/quantization/base_scheme.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/__init__.py
+python/sglang/srt/layers/quantization/expert_pack.py
+python/sglang/srt/layers/quantization/gptq/__init__.py
+python/sglang/srt/layers/quantization/gptq/schemes/__init__.py
+python/sglang/srt/layers/quantization/gptq/schemes/gptq_cpu.py
+python/sglang/srt/layers/quantization/gptq/schemes/gptq_linear.py
+python/sglang/srt/layers/quantization/gptq/schemes/gptq_marlin.py
+python/sglang/srt/layers/quantization/gptq/schemes/gptq_moe.py
+python/sglang/srt/layers/quantization/gptq/schemes/gptq_scheme.py
+python/sglang/srt/layers/quantization/marlin_utils_fp8.py
+python/sglang/srt/layers/quantization/modelslim/schemes/__init__.py
+python/sglang/srt/layers/quantization/quark/quark.py
+python/sglang/srt/layers/quantization/quark/schemes/__init__.py
+python/sglang/srt/layers/quantization/quark/schemes/quark_scheme.py
+python/sglang/srt/layers/quantization/quark/schemes/quark_w4a4_mxfp4.py
+python/sglang/srt/layers/quantization/quark/schemes/quark_w4a4_mxfp4_moe.py
+python/sglang/srt/layers/quantization/quark/schemes/quark_w4a8_mxfp4_moe.py
+python/sglang/srt/layers/quantization/quark/schemes/quark_w8a8_fp8.py
+python/sglang/srt/layers/quantization/quark/schemes/quark_w8a8_fp8_moe.py
+python/sglang/srt/layers/quantization/quark/utils.py
+python/sglang/srt/layers/quantization/quark/weights.py
+python/sglang/srt/model_loader/checkpoint_quantization.py
+python/sglang/srt/model_loader/deepseek4_gguf.py
+python/sglang/srt/model_loader/expert_pack_config.py
+python/sglang/srt/model_loader/expert_pack_loader.py
+python/sglang/srt/model_loader/expert_pack_runtime.py
+python/sglang/srt/model_loader/kimi_k3_gguf.py
+python/sglang/srt/model_loader/post_load.py
+python/sglang/srt/model_loader/remote_instance_weight_loader_utils.py
+python/sglang/srt/models/bert.py
+python/sglang/srt/models/minimax_m3_vl.py
+python/sglang/srt/models/minimax_vl_common.py
+python/sglang/srt/models/roberta.py
+python/sglang/srt/multimodal/processors/locate_anything.py
+python/sglang/srt/weight_cache/daemon.py
+python/sglang/srt/weight_cache/ipc_loader.py
+python/sglang/srt/weight_cache/protocol.py
+python/sglang/srt/weight_cache/transport.py
+
+# SPDX-License-Identifier: Apache-2.0
+
+Files:
+python/sglang/kernels/ops/attention/cute_utils/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/4868b542c9dfd166662eecc4bb8be3a36a3feaa2/vllm/cute_utils/__init__.py
+
+Files:
+python/sglang/kernels/ops/attention/cute_utils/_tcgen05.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/4868b542c9dfd166662eecc4bb8be3a36a3feaa2/vllm/cute_utils/_tcgen05.py
+# this module is named _tcgen05 to avoid name collision with cute.nvgpu.tcgen05
+
+Files:
+python/sglang/kernels/ops/attention/cute_utils/cvt.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/4868b542c9dfd166662eecc4bb8be3a36a3feaa2/vllm/cute_utils/cvt.py
+
+Files:
+python/sglang/kernels/ops/attention/cutedsl_fp8_paged_mqa_logits.py
+python/sglang/kernels/ops/attention/dsa/cutedsl_paged_mqa_logits.py
+python/sglang/kernels/ops/attention/dsa/paged_mqa_logits.py
+
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+Files:
+python/sglang/kernels/ops/attention/cutedsl_gdn_mtp_ring.py
+
+# Copyright (c) 2025 by FlashInfer team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/kernels/ops/attention/dsv4/unified_kv_kernels/paged_decode.py
+python/sglang/kernels/ops/attention/dsv4/unified_kv_kernels/paged_decode_indices.py
+python/sglang/kernels/ops/attention/dsv4/unified_kv_kernels/paged_prefill.py
+
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2024-2026, Advanced Micro Devices, Inc. All rights reserved.
+
+Files:
+python/sglang/kernels/ops/attention/fa4_sm120/flash_fwd.py
+
+# Copyright (c) 2025, Jay Shah, Ganesh Bikshandi, Ying Zhang, Vijay Thakkar, Pradeep Ramani, Tri Dao.
+# SM120 (Blackwell GeForce / DGX Spark) forward pass.
+
+Files:
+python/sglang/kernels/ops/attention/fa4_sm120/runtime.py
+python/sglang/kernels/ops/attention/flash_attn/cute/block_info.py
+python/sglang/kernels/ops/attention/flash_attn/cute/interface.py
+python/sglang/kernels/ops/attention/flash_attn/cute/named_barrier.py
+
+# Copyright (c) 2025, Jay Shah, Ganesh Bikshandi, Ying Zhang, Vijay Thakkar, Pradeep Ramani, Tri Dao.
+
+Files:
+python/sglang/kernels/ops/attention/fla/chunk.py
+
+# Adapted from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/gated_delta_rule/chunk.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/chunk_delta_h.py
+
+# Adapted from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/common/chunk_delta_h.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/chunk_fwd.py
+
+# Adapted from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/gated_delta_rule/chunk_fwd.py
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/chunk_intra.py
+
+# Adapted from flash-linear-attention project.
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/chunk_intra_token_parallel.py
+
+# Adapted from flash-linear-attention project.
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+# Token-parallel implementation of KDA intra chunk kernel
+
+Files:
+python/sglang/kernels/ops/attention/fla/chunk_o.py
+
+# Adapted from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/common/chunk_o.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/cumsum.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/utils/cumsum.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/fused_norm_gate.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/modules/fused_norm_gate.py
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/fused_recurrent.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/gated_delta_rule/fused_recurrent.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/fused_recurrent_linear_replayssm.py
+
+# Buffered output-only linear-attention decode (ReplaySSM Part A), ported to
+# SGLang. Covers BOTH gate granularities with one kernel:
+#   * GDN  (``IS_KDA=False``): per-head SCALAR gate ``alpha = exp(g)``.
+#   * KDA  (``IS_KDA=True``):  per-K-channel gate ``alpha[k] = exp(g[k])`` —
+#     the state decays column-wise, ``S' = S . Diag(alpha) + d k^T``.
+# GDN is the special case of KDA with all per-K decays equal; a single
+# ``IS_KDA`` constexpr selects the gate path and the GDN path is bit-for-bit
+# the original (no regression to the validated GDN kernel).
+#
+# This is a STANDALONE increment: kernel + wrapper only. It is NOT yet wired
+# into the memory pool / radix cache / scheduler / backend dispatch. The caller
+# (currently the correctness test and the microbenchmark) owns the ring tensors.
+#
+# Idea (vs. ``fused_recurrent_gated_delta_rule_packed_decode`` / ``..._kda_...``):
+#   The plain packed decode reads the full recurrent state S [HV, V, K] from
+#   HBM and writes it back *every* decode step (~8*d*n bytes/step of state
+#   traffic for an fp32 state, read+write).  ReplaySSM keeps a small per-slot
+#   ring buffer of the last L steps' (d, k, g) and only WRITES the full state
+#   every L steps (a "flush"); on non-flush steps it appends a tiny
+#   (d, k, g) record and reconstructs the readout from the checkpoint S0 plus
+#   the buffer.  S0 is still READ every step, so per-step state traffic drops
+#   from read+write (~8*d*n) to read-only (~4*d*n) -> roughly halved.
+#
+# Math (single head, single step; matches the packed decode kernels exactly).
+# Let ``a = exp(g)`` be the decay (scalar for GDN, per-K vector for KDA) and
+# ``S`` the state *before* this token:
+#   d_cur = beta * (v - (S . Diag(a)) . k) = beta * (v - S . (a (.) k))
+#   o     = (S . Diag(a)) . q + d_cur*(k^T q) = S . (a (.) q) + d_cur*(k^T q)
+#   S_new = S . Diag(a) + d_cur k^T          # only persisted on flush
+# where ``(.)`` is elementwise over K.  For GDN ``a`` is scalar so
+# ``S . (a (.) q) = a * (S . q)`` (the cheap scalar post-multiply); for KDA the
+# per-K ``a`` folds into q/k before the matvec.  k^T q uses the RAW current
+# k/q (the rank-1 term), so it is identical for both gate types.
+#
+# Buffered reconstruction: with buffered steps j=0..m-1 holding (d_j, k_j, g_j),
+# the state *before* the current token is
+#   S = Diag(A) . S0 + sum_j d_j (W_j (.) k_j)^T          (per-K form)
+# with A[c]   = exp(sum_j g_j[c])                  (total decay, per-K)
+#      W_j[c] = exp(sum_i g_i[c] - cumsum_inclusive_j[c]) = prod_{i>j} a_i[c].
+# For GDN A and W_j are scalars (g is K-independent) and W_j folds onto d_j
+# instead of k_j (either factor works for a scalar). S is reconstructed in
+# K-tiles and immediately read with q (and k) -> the [V,K] state tile is never
+# fully materialized to HBM on a non-flush step.
+#
+# At L=1 the ring is always empty and ``write_pos == L-1`` every step, so the
+# reconstruction term is zero, the total decay is 1, and this kernel reduces
+# *algebraically* to the corresponding packed-decode kernel.
+#
+# SPDX-License-Identifier: Apache-2.0
+# Ported from vllm/model_executor/layers/fla/ops/fused_recurrent_replayssm.py
+# (ReplaySSM, commit 3c85112) and adapted to SGLang's packed GDN/KDA decode
+# layout.
+
+Files:
+python/sglang/kernels/ops/attention/fla/index.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/utils/index.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/kda.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/0384aa7150c4c9778efca041ffd1beb3ad2bd694/vllm/model_executor/layers/fla/ops/kda.py
+# This file contains code copied from the flash-linear-attention project.
+# The original source code was licensed under the MIT license and included
+# the following copyright notice:
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/l2norm.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/modules/l2norm.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/layernorm_gated.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/modules/layernorm_gated.py
+# Copyright (c) 2024, Tri Dao.
+# Based on the Triton LayerNorm tutorial: https://triton-lang.org/main/getting-started/tutorials/05-layer-norm.html
+# For the backward pass, we keep weight_grad and bias_grad in registers and accumulate.
+# This backward pass is faster for dimensions up to 8k, but after that it's much slower due to register spilling.
+# The models we train have hidden dim up to 8k anyway (e.g. Llama 70B), so this is fine.
+
+Files:
+python/sglang/kernels/ops/attention/fla/op.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/utils/op.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fla/wy_fast.py
+
+# Adapt from https://github.com/fla-org/flash-linear-attention/blob/main/fla/ops/gated_delta_rule/wy_fast.py
+# -*- coding: utf-8 -*-
+# Copyright (c) 2023-2025, Songlin Yang, Yu Zhang
+
+Files:
+python/sglang/kernels/ops/attention/fa4_sm120/dispatch.py
+python/sglang/kernels/ops/attention/fa4_sm120/flash_fwd_decode.py
+python/sglang/kernels/ops/attention/fa4_sm120/policy.py
+python/sglang/kernels/ops/attention/fa4_sm120/scheduler.py
+python/sglang/kernels/ops/attention/flash_attention_v4_sm120.py
+
+# Copyright (c) 2026, SGLang Team.
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/copy_utils.py
+
+# Copyright (c) 2025, Wentao Guo, Ted Zadouri, Tri Dao.
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/flash_fwd.py
+
+# Copyright (c) 2025, Jay Shah, Ganesh Bikshandi, Ying Zhang, Vijay Thakkar, Pradeep Ramani, Tri Dao.
+# A reimplementation of
+# https://github.com/Dao-AILab/flash-attention/blob/main/hopper/flash_fwd_kernel_sm80.h
+# and https://github.com/Dao-AILab/flash-attention/blob/main/hopper/flash_fwd_kernel_sm90.h
+# from Cutlass C++ to Cute-DSL.
+# Built on Cute-DSL example: https://github.com/NVIDIA/cutlass/blob/main/examples/python/CuTeDSL/ampere/flash_attention_v2.py
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/flash_fwd_combine.py
+
+# Copyright (c) 2025, Jay Shah, Ganesh Bikshandi, Ying Zhang, Vijay Thakkar, Pradeep Ramani, Tri Dao.
+# A reimplementation of https://github.com/Dao-AILab/flash-attention/blob/main/hopper/flash_fwd_combine_kernel.h
+# from Cutlass C++ to Cute-DSL.
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/flash_fwd_sm100.py
+
+# Copyright (c) 2025, Tri Dao.
+# Copyright (c) 2026, Colfax International. (modifications)
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/flash_fwd_sm90.py
+
+# Copyright (c) 2025, Jay Shah, Ganesh Bikshandi, Ying Zhang, Vijay Thakkar, Pradeep Ramani, Tri Dao.
+# SM90 (Hopper) forward pass for flash attention, extracted from flash_fwd.py.
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/mma_sm100_desc.py
+
+# Copyright (c) 2025, Tri Dao.
+# Ported Cutlass code from C++ to Python:
+# https://github.com/NVIDIA/cutlass/blob/main/include/cute/arch/mma_sm100_desc.hpp
+# https://github.com/NVIDIA/cutlass/blob/main/include/cute/atom/mma_traits_sm100.hpp
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/flash_fwd_mla_sm100.py
+python/sglang/kernels/ops/attention/flash_attn/cute/shearing_bias.py
+
+# Copyright (c) 2026, Colfax International.
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/sm100_hd256_2cta_fmha_forward.py
+
+# Copyright (c) 2025, Siyu Wang, Shengbin Di, Yuxi Chi, Johnsonms, Linfeng Zheng, Haoyan Huang, Lanbo Li, Yun Zhong, Man Yuan, Minmin Sun, Yong Li, Wei Lin.
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/ampere_helpers.py
+python/sglang/kernels/ops/attention/flash_attn/cute/blackwell_helpers.py
+python/sglang/kernels/ops/attention/flash_attn/cute/cute_dsl_utils.py
+python/sglang/kernels/ops/attention/flash_attn/cute/fa_logging.py
+python/sglang/kernels/ops/attention/flash_attn/cute/fast_math.py
+python/sglang/kernels/ops/attention/flash_attn/cute/mask.py
+python/sglang/kernels/ops/attention/flash_attn/cute/pack_gqa.py
+python/sglang/kernels/ops/attention/flash_attn/cute/pipeline.py
+python/sglang/kernels/ops/attention/flash_attn/cute/softmax.py
+python/sglang/kernels/ops/attention/flash_attn/cute/utils.py
+
+# Copyright (c) 2025, Tri Dao.
+
+Files:
+python/sglang/kernels/ops/attention/flash_attn/cute/tile_scheduler.py
+
+# Copyright (c) 2025, Tri Dao, Siyu Wang, Shengbin Di, Yuxi Chi, Johnsonms, Linfeng Zheng, Haoyan Huang, Lanbo Li, Yun Zhong, Man Yuan, Minmin Sun, Yong Li, Wei Lin.
+
+Files:
+python/sglang/kernels/ops/attention/linear/gdn_blackwell/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/4868b542c9dfd166662eecc4bb8be3a36a3feaa2/vllm/model_executor/layers/mamba/ops/gdn_chunk_cutedsl/__init__.py
+
+Files:
+python/sglang/kernels/ops/attention/linear/gdn_blackwell/kernel_h.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/4868b542c9dfd166662eecc4bb8be3a36a3feaa2/vllm/model_executor/layers/mamba/ops/gdn_chunk_cutedsl/kernel_h.py
+
+Files:
+python/sglang/kernels/ops/attention/linear/gdn_blackwell/kernel_kkt_inv_uw.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/4868b542c9dfd166662eecc4bb8be3a36a3feaa2/vllm/model_executor/layers/mamba/ops/gdn_chunk_cutedsl/kernel_kkt_inv_uw.py
+
+Files:
+python/sglang/kernels/ops/attention/linear/gdn_blackwell/kernel_o.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/4868b542c9dfd166662eecc4bb8be3a36a3feaa2/vllm/model_executor/layers/mamba/ops/gdn_chunk_cutedsl/kernel_o.py
+
+Files:
+python/sglang/kernels/ops/attention/linear/kda_blackwell/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# KDA (Kimi Delta Attention) SM100/Blackwell CuteDSL prefill pipeline.
+#
+# Mirrors gdn_blackwell but for KDA's PER-CHANNEL decay gate. A fused Triton
+# prologue computes the per-chunk cumsum g_cu and five pre-scaled key/query
+# tensors; three cutedsl kernels then run the chunked gated delta rule:
+#   prologue -> kkt_inv_uw (U,W) -> h (V_new, per-chunk state, final state) -> o
+
+Files:
+python/sglang/kernels/ops/attention/linear/kda_blackwell/kernel_h.py
+
+# SPDX-License-Identifier: Apache-2.0
+# KDA (Kimi Delta Attention) SM100 chunk recurrent-state kernel.
+#
+# Idea is adopted from GDN blackwell kernel. KDA differs from GDN only in the
+# decay gate, which is PER-CHANNEL (one decay per key-dim k) instead of a single
+# scalar per head. The hard cross-token part of the per-channel decay is folded
+# OUTSIDE this kernel into the pre-scaled key tensor `kg`:
+#
+#     kg[c, k] = k[c, k] * exp(g_cu_last[k] - g_cu[c, k])     (bounded, <= |k|)
+#
+# so the only in-kernel gate logic that remains is:
+#   1. state decay is PER-COLUMN:  H[v, k] *= exp(g_cu_last[k])   (not a scalar)
+#   2. the H_new MMA consumes `kg` (pre-scaled) instead of raw K, and v_new stays
+#      RAW (GDN instead scales v_new by the scalar exp(g_last - g_t) and uses raw K).
+#
+# Math per chunk (state S stored transposed as H = [V, K]):
+#     V_new = U - W @ S                      (gate-free; W already gated in kkt stage)
+#     H_scaled[v, k] = H[v, k] * exp(g_cu_last[k])
+#     H_new = H_scaled + V_new.T @ kg
+
+Files:
+python/sglang/kernels/ops/attention/linear/kda_blackwell/kernel_kkt_inv_uw.py
+
+# SPDX-License-Identifier: Apache-2.0
+# KDA (Kimi Delta Attention) SM100 KKT-inverse + U/W kernel.
+#
+# Adapted from gdn_blackwell/kernel_kkt_inv_uw.py. KDA's decay is PER-CHANNEL, so
+# (as with kernel_h/o) the gate is folded OUTSIDE this kernel into pre-scaled keys:
+#
+#   kL [c,d] = k[c,d] * exp(g_cu[c,d] - g_cu_last[d])   (KKT left operand)
+#   kR [j,d] = k[j,d] * exp(g_cu_last[d] - g_cu[j,d])   (KKT right operand, bounded)
+#   kg [j,d] = k[j,d] * exp(g_cu[j,d])                  (W operand, bounded)
+#
+# Then  KKT[c,j] = sum_d kL[c,d]*kR[j,d] = sum_d k[c,d]*k[j,d]*exp(g_cu[c,d]-g_cu[j,d])
+# carries the per-channel decay, so:
+#   A  = strictLower(beta * KKT)         (NO post-MMA Gamma; decay already inside)
+#   Ai = inverse(I + A)                  (Newton-Schulz, gate-independent -> verbatim)
+#   U  = (Ai * beta) @ V
+#   W  = (Ai * beta) @ kg                (NO Abg; the exp(g_cu) lives in kg)
+#
+# Net: this kernel has NO cumsum and NO g_cu — only beta survives, exactly like GDN.
+
+Files:
+python/sglang/kernels/ops/attention/linear/kda_blackwell/kernel_o.py
+
+# SPDX-License-Identifier: Apache-2.0
+# KDA (Kimi Delta Attention) SM100 output kernel.
+#
+# Adapted from gdn_blackwell/kernel_o.py. KDA's decay is PER-CHANNEL, so the
+# decay cannot be applied as a post-MMA scalar Gamma. Instead all gate + scale
+# factors are folded OUTSIDE this kernel into three pre-scaled tensors:
+#
+#   qg [c,d]  = scale * q[c,d] * exp(g_cu[c,d])                 -> Q @ H.T term
+#   qg2[c,d]  = scale * q[c,d] * exp(g_cu[c,d] - g_cu_last[d])  -> Aqk Q operand
+#   kg [j,d]  =         k[j,d] * exp(g_cu_last[d] - g_cu[j,d])  -> Aqk K operand
+#                                                  (== kernel_h's kg, bounded <=|k|)
+#
+# Then:
+#   Aqk = strictLowerIncl(qg2 @ kg.T)        (masking warp: causal mask only, NO Gamma)
+#   QH  = qg @ H.T                           (scale + exp(g_cu) already baked)
+#   O   = QH + Aqk @ v_new                   (epilogue: NO scale, NO exp(g_cu))
+#
+# Net effect: g_cu is NOT needed inside this kernel at all.
+
+Files:
+python/sglang/kernels/ops/attention/linear/kda_blackwell/prologue.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Fused Triton prologue for the KDA Blackwell pipeline.
+#
+# In ONE pass per (chunk, head) it computes the per-chunk cumsum g_cu and the five
+# pre-scaled key/query tensors the cutedsl kernels consume, replacing ~30 separate
+# PyTorch elementwise ops + copies:
+#
+#   g_cu      = cumsum_within_chunk(g)            [T, Hv, K]  (fp32, for kernel_h decay)
+#   g_last[d] = g_cu at the chunk's last token    (= total sum over the chunk)
+#   kL  = k * exp(g_cu - g_last)    (kkt KKT-left)
+#   kR  = k * exp(g_last - g_cu)    (kkt KKT-right == kernel_h kg == kernel_o Aqk-K)
+#   kgw = k * exp(g_cu)             (kkt W operand)
+#   qg  = scale * q * exp(g_cu)             (kernel_o Q@H)
+#   qg2 = scale * q * exp(g_cu - g_last)    (kernel_o Aqk-Q)
+
+Files:
+python/sglang/kernels/ops/attention/linear/kda_nvidia_prefill/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# NVIDIA KDA_prefill (Blackwell): optimized chunked KDA forward, an
+# FLA-compatible replacement for chunk_kda_fwd. K1 (gate+cumsum+scale, CuTe)
+# + K2 (intra sub-chunk, CuTe) + K3 (inter-chunk solve, Triton) + K4
+# (W/U/v_new/O/state update, cuTile persistent). 2.3-2.9x vs the FLA
+# reference on B200 in the upstream package tests.
+
+Files:
+python/sglang/kernels/ops/attention/linear/kda_nvidia_prefill/chunk_fwd.py
+
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-License-Identifier: Apache-2.0
+# Vendored from the NVIDIA KDA_prefill package (benchmark/ Blackwell path)
+# for the Kimi-K3 chunked prefill forward. Local deltas: fla.* imports
+# re-pointed to sglang's vendored fla subset, flat sibling imports made
+# package-relative, RCP_LN2 inlined.
+# ruff: noqa  -- vendored kernel library, minimal local deltas
+
+Files:
+python/sglang/kernels/ops/attention/linear/seg_la.py
+
+# Copyright (c) Ant Financial Service Group and its affiliates.
+
+Files:
+python/sglang/kernels/ops/diffusion/attention/sana_wm_gdn_chunkwise_triton.py
+python/sglang/kernels/ops/diffusion/attention/sana_wm_gdn_triton.py
+
+# Copyright 2024 NVIDIA CORPORATION & AFFILIATES
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+Files:
+python/sglang/kernels/ops/diffusion/modulate/ltx2_ada_values_triton.py
+
+# Adapted from NVlabs/Sana sol-engine LTX2 Ada-value fusion.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+Files:
+python/sglang/kernels/ops/gemm/cutedsl_bf16_gemm.py
+
+# Copyright (c) 2026, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2026 by FlashInfer team.
+# Copyright 2026 SGLang Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+Files:
+python/sglang/kernels/ops/gemm/cutedsl_dsv3_fused_a_gemm.py
+
+# Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+# Copyright 2023-2024 SGLang Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/kernels/ops/mamba/causal_conv1d_triton.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright (c) 2024, Tri Dao.
+# Adapted from https://github.com/Dao-AILab/causal-conv1d/blob/main/causal_conv1d/causal_conv1d_interface.py
+# and https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/mamba/ops/causal_conv1d.py
+
+Files:
+python/sglang/kernels/ops/mamba/triton_ops/mamba_ssm.py
+
+# Copyright (c) 2024, Tri Dao, Albert Gu.
+# Adapted from https://github.com/state-spaces/mamba/blob/v2.2.4/mamba_ssm/ops/triton/selective_state_update.py
+
+Files:
+python/sglang/kernels/ops/mamba/triton_ops/ssd_bmm.py
+
+# Copyright (c) 2024, Tri Dao, Albert Gu.
+# Adapted from https://github.com/state-spaces/mamba/blob/v2.2.4/mamba_ssm/ops/triton/ssd_bmm.py
+
+Files:
+python/sglang/kernels/ops/mamba/triton_ops/ssd_chunk_scan.py
+
+# Copyright (c) 2024, Tri Dao, Albert Gu.
+# Adapted from https://github.com/state-spaces/mamba/blob/v2.2.4/mamba_ssm/ops/triton/ssd_chunk_scan.py
+
+Files:
+python/sglang/kernels/ops/mamba/triton_ops/ssd_chunk_state.py
+
+# Copyright (c) 2024, Tri Dao, Albert Gu.
+# Adapted from https://github.com/state-spaces/mamba/blob/v2.2.4/mamba_ssm/ops/triton/ssd_chunk_state.py
+
+Files:
+python/sglang/kernels/ops/mamba/triton_ops/ssd_combined.py
+
+# Copyright (c) 2024, Tri Dao, Albert Gu.
+# Adapted from https://github.com/state-spaces/mamba/blob/v2.2.4/mamba_ssm/ops/triton/ssd_combined.py
+
+Files:
+python/sglang/kernels/ops/mamba/triton_ops/ssd_state_passing.py
+
+# Copyright (c) 2024, Tri Dao, Albert Gu.
+# Adapted from https://github.com/state-spaces/mamba/blob/v2.2.4/mamba_ssm/ops/triton/ssd_state_passing.py
+
+Files:
+python/sglang/kernels/ops/moe/rocm_moe_utils.py
+
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.9.1rc2/vllm/model_executor/layers/fused_moe/rocm_aiter_fused_moe.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+Files:
+python/sglang/srt/compilation/backend.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/backend.py
+
+Files:
+python/sglang/srt/compilation/compilation_config.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/compilation_config.py
+
+Files:
+python/sglang/srt/compilation/compilation_counter.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/compilation_counter.py
+
+Files:
+python/sglang/srt/compilation/compiler_interface.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/compiler_interface.py
+
+Files:
+python/sglang/srt/compilation/cuda_piecewise_backend.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/cuda_piecewise_backend.py
+
+Files:
+python/sglang/srt/compilation/fix_functionalization.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/fix_functionalization.py
+
+Files:
+python/sglang/srt/compilation/fx_utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/fx_utils.py
+
+Files:
+python/sglang/srt/compilation/inductor_pass.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/inductor_pass.py
+
+Files:
+python/sglang/srt/compilation/pass_manager.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0/vllm/compilation/pass_manager.py
+
+Files:
+python/sglang/srt/configs/bailing_hybrid.py
+python/sglang/srt/configs/olmo3.py
+python/sglang/srt/configs/qwen3_next.py
+
+# coding=utf-8
+# Copyright 2024 The Qwen team, Alibaba Group and the HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/configs/exaone.py
+
+# coding=utf-8
+# Copyright 2024 The LG AI Research EXAONE Lab. All rights reserved.
+# Copyright 2024 The LG CNS AI Engineering Team.
+# Copyright 2023-2024 SGLang Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/configs/falcon_h1.py
+
+# coding=utf-8
+# Copyright 2024 TII and the HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/configs/granitemoehybrid.py
+
+# coding=utf-8
+# Copyright 2025 IBM and the HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/configs/kimi_linear.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from: https://github.com/vllm-project/vllm/blob/0384aa7150c4c9778efca041ffd1beb3ad2bd694/vllm/transformers_utils/configs/kimi_linear.py
+
+Files:
+python/sglang/srt/configs/kimi_vl.py
+python/sglang/srt/configs/kimi_vl_moonvit.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Adapted from https://huggingface.co/moonshotai/Kimi-VL-A3B-Instruct/blob/main/configuration_kimi_vl.py
+
+Files:
+python/sglang/srt/configs/laguna.py
+
+# coding=utf-8
+# Copyright 2023-2026 SGLang Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+Files:
+python/sglang/srt/configs/lfm2.py
+
+# coding=utf-8
+# Copyright 2024 Liquid AI and the HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/configs/lfm2_vl.py
+python/sglang/srt/multimodal/processors/lfm2_vl.py
+
+# Copyright 2026 Liquid AI. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/configs/load_config.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/config.py
+
+Files:
+python/sglang/srt/configs/locate_anything.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Adapted from https://huggingface.co/nvidia/LocateAnything-3B/blob/main/configuration_locateanything.py
+
+Files:
+python/sglang/srt/configs/minicpmv4_6.py
+python/sglang/srt/models/minicpmv_vit.py
+python/sglang/srt/multimodal/processors/minicpmv4_6.py
+
+# Copyright 2026 The SGLang team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+Files:
+python/sglang/srt/configs/nano_nemotron_vl.py
+
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://huggingface.co/nvidia/NVIDIA-Nemotron-Nano-12B-v2-VL-BF16/blob/cb5a65ff10232128389d882d805fa609427544f1/configuration.py
+
+Files:
+python/sglang/srt/configs/nemotron_h.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/transformers_utils/configs/nemotron_h.py
+
+Files:
+python/sglang/srt/configs/parakeet.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/transformers_utils/configs/parakeet.py
+
+Files:
+python/sglang/srt/configs/radio.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/transformers_utils/configs/radio.py
+
+Files:
+python/sglang/srt/configs/zaya.py
+python/sglang/srt/models/zaya.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/configs/lfm2_moe.py
+python/sglang/srt/configs/mamba_utils.py
+python/sglang/srt/disaggregation/kv_events.py
+python/sglang/srt/mem_cache/allocator/base.py
+python/sglang/srt/mem_cache/allocator/paged.py
+python/sglang/srt/mem_cache/allocator/token.py
+python/sglang/srt/multimodal/processors/nano_nemotron_vl.py
+
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/distributed/communication_op.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/communication_op.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/cuda_wrapper.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/device_communicators/cuda_wrapper.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/custom_all_reduce.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/device_communicators/custom_all_reduce.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/custom_all_reduce_ops.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/_custom_ops.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/custom_all_reduce_utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/device_communicators/custom_all_reduce_utils.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/hpu_communicator.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/device_communicators/hpu_communicator.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/pynccl.py
+python/sglang/srt/distributed/device_communicators/pynccl_wrapper.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/device_communicators/pynccl.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/shm_broadcast.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/device_communicators/shm_broadcast.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/torch_symm_mem.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/bf214ca22625e311a2c4c0dfbf7af19128f4919c/vllm/distributed/device_communicators/symm_mem.py
+
+Files:
+python/sglang/srt/distributed/device_communicators/xpu_communicator.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/device_communicators/xpu_communicator.py
+
+Files:
+python/sglang/srt/distributed/parallel_state.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/parallel_state.py
+
+Files:
+python/sglang/srt/distributed/parallel_state.py
+
+# Copyright 2023 The vLLM team.
+# Adapted from
+# https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/core/parallel_state.py
+# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+
+Files:
+python/sglang/srt/distributed/utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/distributed/utils.py
+
+Files:
+python/sglang/srt/distributed/utils.py
+
+# Copyright 2023 The vLLM team.
+# Adapted from
+# https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/core/tensor_parallel/utils.py
+# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+
+Files:
+python/sglang/srt/entrypoints/context.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Copied from vLLM
+
+Files:
+python/sglang/srt/entrypoints/harmony_utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from vLLM: https://github.com/vllm-project/vllm/blob/1b9902806915040ac9b3029f2ab7522ec505afc3/vllm/entrypoints/harmony_utils.py
+# Slight differences in processing chat messages
+
+Files:
+python/sglang/srt/entrypoints/openai/serving_responses.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Adapted from vLLM's OpenAIServingResponses
+
+Files:
+python/sglang/srt/entrypoints/sidecar.py
+
+# Copyright 2023-2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/hardware_backend/npu/graph_runner/eagle_draft_extend_npu_graph_runner.py
+python/sglang/srt/hardware_backend/npu/graph_runner/multi_layer_eagle_draft_extend_npu_graph_runner.py
+
+# Copyright 2024-2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/layers/attention/mamba/causal_conv1d.py
+
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/mamba/ops/causal_conv1d.py
+# SPDX-License-Identifier: Apache-2.0
+
+Files:
+python/sglang/srt/layers/attention/mamba/causal_conv1d.py
+
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright (c) 2024, Tri Dao.
+# Adapted from https://github.com/Dao-AILab/causal-conv1d/blob/main/causal_conv1d/causal_conv1d_interface.py
+
+Files:
+python/sglang/srt/layers/attention/mamba/mamba2_metadata.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/2c58742dff8613a3bd7496f2008ce927e18d38d1/vllm/model_executor/layers/mamba/mamba2_metadata.py
+
+Files:
+python/sglang/kernels/ops/attention/minimax_sparse/common/utils.py
+python/sglang/kernels/ops/attention/minimax_sparse/decode/flash_with_topk_idx.py
+python/sglang/kernels/ops/attention/minimax_sparse/decode/topk_sparse.py
+python/sglang/kernels/ops/attention/minimax_sparse/prefill/flash_with_topk_idx.py
+python/sglang/kernels/ops/attention/minimax_sparse/prefill/topk_sparse.py
+python/sglang/srt/layers/attention/minimax_sparse_ops/minimax_sparse.py
+python/sglang/srt/layers/attention/minimax_sparse_ops/naive/flash_with_topk_idx.py
+python/sglang/srt/layers/attention/minimax_sparse_ops/naive/topk_sparse.py
+
+# Copyright 2025 XunhaoLai. All rights reserved.
+
+Files:
+python/sglang/kernels/ops/quantization/fp8_quantize.py
+python/sglang/kernels/ops/quantization/nvfp4_gemm_swiglu_nvfp4_quant.py
+python/sglang/srt/layers/attention/tokenspeed_mla_backend.py
+
+# Copyright (c) 2026 LightSeek Foundation
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+Files:
+python/sglang/srt/layers/attn_residual.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Kimi-K3 Attention Residual: snapshot bank + aggregation.
+#
+# The public API is the AttnResidual class (constructed once per forward pass).
+# It owns the frozen snapshot bank [T, NB, H] and the valid-row counter, and
+# dispatches each aggregation point (score rows → softmax → weighted sum →
+# RMSNorm) by hardware capability:
+#   fast  — warp-specialized TMA kernel: cp.async.bulk producer +
+#           online-softmax consumers over a double-buffered chunk ring, out
+#           norm fused, per-nvb tuned launch config, one persistent CTA per
+#           SM. Taken on SM100+ except SM12x with H=7168.
+#   hip   — single Triton kernel, everything in one launch; taken on ROCm
+#           within its register budget.
+#   fused — Triton 2-kernel pipeline with full H-parallelism; the fallback
+#           everywhere the fast kernel does not apply.
+# aggregate_stream_torch is the eager reference (tests and the
+# H % _BLOCK_H != 0 shape fallback of aggregate_stream).
+
+Files:
+python/sglang/kernels/ops/attention/linear/lightning_attn.py
+python/sglang/kernels/ops/mamba/triton_ops/mamba_ssm.py
+python/sglang/kernels/ops/mamba/triton_ops/ssd_bmm.py
+python/sglang/kernels/ops/mamba/triton_ops/ssd_chunk_scan.py
+python/sglang/kernels/ops/mamba/triton_ops/ssd_chunk_state.py
+python/sglang/kernels/ops/mamba/triton_ops/ssd_combined.py
+python/sglang/kernels/ops/mamba/triton_ops/ssd_state_passing.py
+python/sglang/kernels/ops/quantization/awq_triton.py
+python/sglang/srt/entrypoints/openai/tool_server.py
+python/sglang/srt/layers/linear.py
+python/sglang/srt/layers/parameter.py
+python/sglang/srt/layers/quantization/humming.py
+python/sglang/srt/layers/quantization/nvfp4_online.py
+python/sglang/srt/layers/utils/common.py
+python/sglang/srt/models/dbrx.py
+python/sglang/srt/models/gemma.py
+python/sglang/srt/models/gemma2.py
+python/sglang/srt/models/gpt_bigcode.py
+python/sglang/srt/models/gpt_j.py
+python/sglang/srt/models/granite.py
+python/sglang/srt/models/internlm2.py
+python/sglang/srt/models/internvl.py
+python/sglang/srt/models/olmo.py
+python/sglang/srt/models/orion.py
+python/sglang/srt/models/solar.py
+python/sglang/srt/models/stablelm.py
+python/sglang/srt/models/starcoder2.py
+python/sglang/srt/models/step3_vl_10b.py
+python/sglang/srt/models/teleflm.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+Files:
+python/sglang/srt/layers/moe/fused_moe_triton/layer.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/a6221a144af772fd1a68fe7e627935dc53e81738/vllm/model_executor/layers/fused_moe/layer.py
+
+Files:
+python/sglang/srt/layers/moe/fused_moe_triton/triton_kernels_moe.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/pull/18595/files#diff-f426a6de78c82ffec568eff6811bfbf0043dab5f87f1a8c0cffdbdcb8a81e035
+
+Files:
+python/sglang/srt/layers/moe/moe_runner/triton_utils/fused_moe.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/a6221a144af772fd1a68fe7e627935dc53e81738/vllm/model_executor/layers/fused_moe/fused_moe.py
+
+Files:
+python/sglang/srt/layers/quantization/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://raw.githubusercontent.com/vllm-project/vllm/v0.5.5/vllm/model_executor/layers/quantization/__init__.py
+
+Files:
+python/sglang/srt/layers/quantization/base_config.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://raw.githubusercontent.com/vllm-project/vllm/v0.5.5/vllm/model_executor/layers/quantization/base_config.py
+
+Files:
+python/sglang/srt/layers/quantization/bitsandbytes.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from: https://github.com/vllm-project/vllm/blob/d4d2751732c3ccae162a5a0160c7d4fe05d2779a/vllm/model_executor/layers/quantization/bitsandbytes.py
+
+Files:
+python/sglang/srt/layers/quantization/blockwise_int8.py
+python/sglang/srt/layers/quantization/fp8.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/model_executor/layers/quantization/fp8.py
+
+Files:
+python/sglang/srt/layers/quantization/compressed_tensors/compressed_tensors.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w4a4_nvfp4.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_fp8.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py
+python/sglang/srt/layers/quantization/compressed_tensors/utils.py
+
+# Adapted from https://github.com/vllm-project/vllm/tree/main/vllm/model_executor/layers/quantization/compressed_tensors
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+Files:
+python/sglang/srt/layers/quantization/gguf.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from: https://github.com/vllm-project/vllm/blob/ab3e80042eac24dd362408e6d63ad98768046359/vllm/model_executor/layers/quantization/gguf.py
+
+Files:
+python/sglang/srt/layers/quantization/kv_cache.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/quantization/kv_cache.py
+
+Files:
+python/sglang/srt/layers/quantization/marlin_utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/quantization/utils/marlin_utils.py
+
+Files:
+python/sglang/srt/layers/quantization/modelopt_quant.py
+python/sglang/srt/layers/quantization/petit.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/quantization/modelopt.py
+
+Files:
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_scheme.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a16_fp8.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_wNa16.py
+python/sglang/srt/layers/quantization/modelslim/schemes/modelslim_scheme.py
+python/sglang/srt/layers/quantization/modelslim/schemes/modelslim_w4a4_int4.py
+python/sglang/srt/layers/quantization/modelslim/schemes/modelslim_w8a8_int8.py
+
+# Adapted from https://github.com/vllm-project/vllm/tree/main/vllm/model_executor/layers/quantization/compressed_tensors
+# SPDX-License-Identifier: Apache-2.0
+
+Files:
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_scheme.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a16_fp8.py
+python/sglang/srt/layers/quantization/compressed_tensors/schemes/compressed_tensors_wNa16.py
+python/sglang/srt/layers/quantization/modelslim/schemes/modelslim_scheme.py
+python/sglang/srt/layers/quantization/modelslim/schemes/modelslim_w4a4_int4.py
+python/sglang/srt/layers/quantization/modelslim/schemes/modelslim_w8a8_int8.py
+
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+Files:
+python/sglang/srt/layers/quantization/moe_wna16.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/quantization/moe_wna16.py
+
+Files:
+python/sglang/srt/layers/quantization/mxfp4.py
+
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/quantization/mxfp4.py
+
+Files:
+python/sglang/srt/layers/quantization/mxfp4_tensor.py
+
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/layers/quantization/utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/layers/quantization/utils/quant_utils.py
+
+Files:
+python/sglang/srt/layers/radix_linear_attention.py
+python/sglang/srt/models/glm4_moe.py
+
+# Copyright 2025-2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/layers/rotary_embedding/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://raw.githubusercontent.com/vllm-project/vllm/refs/tags/v0.6.6.post1/vllm/model_executor/layers/rotary_embedding.py
+
+Files:
+python/sglang/srt/layers/vocab_parallel_embedding.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.3.post1/vllm/model_executor/layers/vocab_parallel_embedding.py
+
+Files:
+python/sglang/srt/mem_cache/allocator/mamba.py
+
+# Copyright 2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Slot allocator for the Mamba state pool.
+#
+# Mamba caches one whole state tensor per request, so the allocator hands out
+# fixed-size slots (1 per request) rather than paged token KV indices.  The
+# underlying tensor storage lives in ``MambaPool``; this class owns only the
+# free-slot bookkeeping.
+
+Files:
+python/sglang/srt/mem_cache/embedding_store.py
+python/sglang/srt/mem_cache/storage/__init__.py
+python/sglang/srt/mem_cache/storage/backend_factory.py
+python/sglang/srt/mem_cache/storage/file/__init__.py
+python/sglang/srt/mem_cache/storage/file/lru_file_evictor.py
+python/sglang/srt/mem_cache/storage/mmap/__init__.py
+python/sglang/srt/mem_cache/storage/shm/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to SGLang project
+
+Files:
+python/sglang/srt/mem_cache/flush_cache.py
+python/sglang/srt/models/llama_eagle.py
+python/sglang/srt/models/llama_eagle3.py
+python/sglang/srt/models/qwen2_eagle.py
+
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/mem_cache/mamba_checkpoint_pool.py
+
+# Copyright 2023-2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# MambaCheckpointPool — the radix prefix cache's int8-compressed store for cached
+# linear-attention (KDA / GDN / Mamba2 gated-delta-rule) recurrent states.
+#
+# It decouples the *cached* states (radix-owned, idle, compressed) from the *active*
+# ``MambaPool`` (running requests, full precision, kernel-facing). The radix stores
+# one cached state per node HERE; on a prefix-cache hit it is dequantized back into
+# a fresh active slot (copy-on-write).
+#
+# Per cached slot it holds:
+#   * the SSM temporal state in **int8** (per-(head,k-channel) symmetric), via the
+#     embedded ``Int8CheckpointStore`` — ~2x more cached states than bf16,
+#     quality-safe (quantized once on store, dequantized once on a hit; never
+#     re-enters the recurrence as a quant->dequant loop).
+#   * the conv1d window state at its native dtype (tiny, W-1 tokens; not worth
+#     quantizing).
+#
+# Why int8 (not fp8): a cached checkpoint is loaded ONCE on a cache hit, then
+# decoding continues at full precision, so the only error is a single rounding of
+# S. The temporal state is roughly uniformly distributed, so int8-per-(head,
+# k-channel) beats fp8-e4m3 at the same 1 byte (fp8 wastes bits on the exponent).
+# The scale axis (reduces over d_v) matches the per-k-channel decay diag(alpha), so
+# the large state entries keep ~bf16 precision and the error concentrates on small
+# entries that barely affect the readout. Storing cached states int8 gives ~2x the
+# cached-prefix capacity at fixed memory, and composes with host-offload
+# (--enable-hierarchical-cache) which it also halves.
+#
+# This is strategy-agnostic: whether the active slot to be cached was produced by
+# the ``no_buffer`` donate (copy_from) or the ``extra_buffer`` ping-pong track
+# buffer (spec path), both converge on "an active slot becomes the cached
+# ``mamba_value``" — which is exactly the (store_from_active) hook here. Slot
+# lifecycle is owned by the caller via the embedded ``MambaSlotAllocator``.
+
+Files:
+python/sglang/srt/mem_cache/memory_pool.py
+
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Memory pool.
+#
+# SGLang has two levels of memory pool.
+# ReqToTokenPool maps a request to its token locations.
+# TokenToKVPoolAllocator manages the indices to kv cache data.
+# KVCache actually holds the physical kv cache.
+
+Files:
+python/sglang/srt/model_executor/mindspore_runner.py
+python/sglang/srt/models/mindspore.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the SGLang project
+
+Files:
+python/sglang/srt/model_loader/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/model_executor/model_loader/__init__.py
+
+Files:
+python/sglang/srt/model_loader/loader.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.3.post1/vllm/model_executor/model_loader/loader.py
+
+Files:
+python/sglang/srt/model_loader/utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/model_executor/model_loader/utils.py
+
+Files:
+python/sglang/srt/model_loader/weight_utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/model_executor/model_loader/weight_utils.py
+
+Files:
+python/sglang/srt/models/baichuan.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/baichuan.py
+
+Files:
+python/sglang/srt/models/baichuan.py
+
+# coding=utf-8
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/bailing_moe.py
+python/sglang/srt/models/bailing_moe_nextn.py
+python/sglang/srt/models/llada2.py
+
+# coding=utf-8
+# Copyright 2023 Antgroup and The HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/bailing_moe_linear.py
+
+# coding=utf-8
+# Copyright 2023 Antgroup and The HuggingFace Inc. team. All rights reserved.
+
+Files:
+python/sglang/srt/models/cohere2_moe.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 SGLang Team
+# Adapted from:
+# https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/model_executor/models/cohere2_moe.py
+
+Files:
+python/sglang/srt/models/cohere2_vision.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 SGLang Team
+# Adapted from:
+# https://github.com/vllm-project/vllm/blob/v0.21.0/vllm/model_executor/models/cohere2_vision.py
+
+Files:
+python/sglang/srt/models/commandr.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/commandr.py
+
+Files:
+python/sglang/srt/models/commandr.py
+
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Copyright 2024 Cohere and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/apertus.py
+python/sglang/srt/models/deepseek_ocr.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 The SwissAI Initiative
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/dots3.py
+python/sglang/srt/models/dots3_nextn.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2023-2024 SGLang Team
+
+Files:
+python/sglang/srt/models/dots_vlm.py
+
+# Copyright 2025 The RedNote HiLab team.
+# Copyright 2025 The SGLang team.
+#
+# This code is based on the DeepseekVL2ForCausalLM and DotsVisionTransformer
+# implementation in this library.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/managers/configure_logging.py
+python/sglang/srt/models/ernie45_vl.py
+
+# Copyright 2023-2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/exaone.py
+
+# Copyright 2024 The LGcns AI Engineering Team
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/exaone_moe.py
+python/sglang/srt/models/exaone_moe_mtp.py
+
+# Copyright 2025 The LG AI Research Team
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/glm4_moe_lite.py
+python/sglang/srt/models/glm4_moe_lite_nextn.py
+
+# Copyright 2026-2027 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/glm_image_vl.py
+
+# Adapted from
+# https://github.com/huggingface/transformers/blob/main/src/transformers/models/glm_image/modeling_glm_image.py
+# Copyright 2025 The ZhipuAI Team.
+# Copyright 2025 The HuggingFace Team.
+# Copyright 2026 SGLang Team.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/gpt2.py
+
+# coding=utf-8
+# Adapted from
+# https://github.com/huggingface/transformers/blob/v4.28.0/src/transformers/models/gpt2/modeling_gpt2.py
+# Copyright 2023 The vLLM team.
+# Copyright 2018 The OpenAI Team Authors and HuggingFace Inc. team.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/hunyuan.py
+
+# coding=utf-8
+# Copyright 2024 The HunYuan team.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/hunyuan_v3.py
+python/sglang/srt/models/hunyuan_v3_nextn.py
+
+# coding=utf-8
+# Copyright 2026 The HunYuan team.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/idefics2.py
+
+# Copyright 2023 The SGLang team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/kimi_linear.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from: https://github.com/vllm-project/vllm/blob/0384aa7150c4c9778efca041ffd1beb3ad2bd694/vllm/model_executor/models/kimi_linear.py
+
+Files:
+python/sglang/srt/models/kimi_vl.py
+
+# SPDX-License-Identifier: Apache-2.0
+# ruff: noqa: E501
+# Adapted from https://huggingface.co/moonshotai/Kimi-VL-A3B-Instruct/blob/main/modeling_kimi_vl.py
+# Copyright 2025 The Moonshot AI Team, DeepSeek-AI, and HuggingFace Inc. team. All rights reserved.
+#
+# The code is based on llava (llava/modeling_llava.py) and DeepSeek-V3 (DeepSeek-V3/modeling_deepseek.py), but modified for KimiVL.
+#
+# Licensing Information:
+# - Code derived from llava (llava/modeling_llava.py) and DeepSeek-V3 (DeepSeek-V3/modeling_deepseek.py) is licensed under the Apache License, Version 2.0.
+# - Other parts of the code are licensed under the MIT License.
+#
+# Apache License, Version 2.0:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# MIT License:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+Files:
+python/sglang/srt/models/kimi_vl_moonvit.py
+
+# SPDX-License-Identifier: Apache-2.0
+# ruff: noqa: E501
+# Adapted from https://huggingface.co/moonshotai/Kimi-VL-A3B-Instruct/blob/main/modeling_kimi_vl.py
+# Shared MoonViT building blocks for kimi_vl.py and kimi_k25.py
+# Copyright 2025 The Moonshot AI Team, DeepSeek-AI, and HuggingFace Inc. team. All rights reserved.
+#
+# The code is based on llava (llava/modeling_llava.py) and DeepSeek-V3 (DeepSeek-V3/modeling_deepseek.py), but modified for KimiVL.
+#
+# Licensing Information:
+# - Code derived from llava (llava/modeling_llava.py) and DeepSeek-V3 (DeepSeek-V3/modeling_deepseek.py) is licensed under the Apache License, Version 2.0.
+# - Other parts of the code are licensed under the MIT License.
+#
+# Apache License, Version 2.0:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# MIT License:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+Files:
+python/sglang/srt/models/laguna.py
+
+# Copyright 2023-2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+Files:
+python/sglang/srt/models/lfm2_vl.py
+
+# Copyright 2026 Liquid AI. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/locate_anything.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Adapted from https://huggingface.co/nvidia/LocateAnything-3B/blob/main/modeling_locateanything.py
+# and from vllm-project/vllm PR #44182.
+
+Files:
+python/sglang/srt/models/longcat_flash.py
+python/sglang/srt/models/longcat_flash_nextn.py
+
+# Apache License, Version 2.0:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# MIT License:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+Files:
+python/sglang/srt/models/mimo_mtp.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/pull/17433/files  and deepseek_nextn.py
+
+Files:
+python/sglang/srt/models/minicpmv.py
+
+# Adapted from
+# https://github.com/huggingface/transformers/blob/v4.28.0/src/transformers/models/llama/modeling_llama.py
+# Copyright 2023 The SGLang team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/mistral_large_3.py
+
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/mistral_large_3.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+Files:
+python/sglang/srt/models/mistral_large_3_eagle.py
+
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/mistral_large_3_eagle.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+Files:
+python/sglang/srt/models/deepseek.py
+python/sglang/srt/models/deepseek_v2.py
+python/sglang/srt/models/llama.py
+python/sglang/srt/models/llama4.py
+python/sglang/srt/models/mixtral.py
+python/sglang/srt/models/mixtral_quant.py
+python/sglang/srt/models/olmo2.py
+python/sglang/srt/models/olmoe.py
+python/sglang/srt/models/qwen.py
+python/sglang/srt/models/qwen2_moe.py
+python/sglang/srt/models/torch_native_llama.py
+python/sglang/srt/models/xverse.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/mllama.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from:
+# https://github.com/vllm-project/vllm/blob/7193774b1ff8603ad5bf4598e5efba0d9a39b436/vllm/model_executor/models/mllama.py
+
+Files:
+python/sglang/srt/models/nano_nemotron_vl.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/nano_nemotron_vl.py
+
+Files:
+python/sglang/srt/models/nemotron_h.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2023-2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/nemotron_h.py
+
+Files:
+python/sglang/srt/models/nemotron_nas.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2023-2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/nemotron_nas.py
+
+Files:
+python/sglang/srt/models/orion.py
+
+# Adapted from
+# https://huggingface.co/OrionStarAI/Orion-14B-Base/blob/main/modeling_orion.py
+# Copyright (c) OrionStar Inc.
+# LICENSE: https://huggingface.co/OrionStarAI/Orion-14B-Base/blob/main/LICENSE
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/orion.py
+
+Files:
+python/sglang/srt/models/paddleocr_vl.py
+python/sglang/srt/multimodal/processors/paddleocr_vlm.py
+
+# Reference: ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlepaddle/paddleocr-genai-vllm-server:latest
+# Copyright (c) 2025 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/parakeet.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/parakeet.py
+#
+# Audio encoder component used by models/nano_nemotron_vl.py
+
+Files:
+python/sglang/srt/models/phi.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/phi.py
+
+Files:
+python/sglang/srt/models/phi4mm.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from
+# https://github.com/vllm-project/vllm/blob/6071e989df1531b59ef35568f83f7351afb0b51e/vllm/model_executor/models/phi4mm.py
+# https://huggingface.co/microsoft/Phi-4-multimodal-instruct/blob/main/processing_phi4mm.py
+
+Files:
+python/sglang/srt/models/phi4mm_audio.py
+python/sglang/srt/models/phi4mm_utils.py
+
+# Copyright 2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+#!/usr/bin/env python3
+
+Files:
+python/sglang/kernels/ops/quantization/fp8_kernel.py
+python/sglang/srt/layers/moe/topk.py
+python/sglang/srt/models/pixtral.py
+
+# Copyright 2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/qwen2_audio.py
+
+# coding=utf-8
+# Adapted from
+# https://github.com/huggingface/transformers/blob/1d45d90e5d1552eccb6d8cc9b7bba283ccefb808/src/transformers/models/qwen2_audio/modeling_qwen2_audio.py
+# Copyright 2024 The Qwen team.
+# Copyright 2023 The vLLM team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/qwen2_5_vl.py
+python/sglang/srt/models/qwen2_vl.py
+
+# coding=utf-8
+# Adapted from
+# https://github.com/huggingface/transformers/blob/19e6e80e10118f855137b90740936c0b11ac397f/src/transformers/models/qwen2_vl/modeling_qwen2_vl.py
+# Copyright 2024 The Qwen team.
+# Copyright 2023 The vLLM team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Files:
+python/sglang/srt/models/qwen3_5.py
+python/sglang/srt/models/qwen3_5_text.py
+python/sglang/srt/models/qwen3_omni_moe.py
+python/sglang/srt/models/qwen3_vl.py
+python/sglang/srt/models/qwen3_vl_moe.py
+
+# Copyright 2025 Qwen Team
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/radio.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/radio.py
+
+Files:
+python/sglang/srt/models/registry.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/model_executor/models/registry.py
+
+Files:
+python/sglang/srt/models/siglip2.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2026 Liquid AI. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Adapted from vLLM's implementation of Siglip2VisionModel
+# https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/lfm2_siglip2.py
+#
+# Siglip2 is a vision encoder that supports variable-resolution images via NaFlex.
+# Unlike Siglip v1 which uses fixed-size images, Siglip2 handles images of different
+# sizes by packing them into sequences and using cu_seqlens for attention.
+
+Files:
+python/sglang/srt/models/solar.py
+
+# Adapted from
+# https://github.com/huggingface/transformers/blob/v4.28.0/src/transformers/models/llama/modeling_llama.py
+# Copyright 2023 The vLLM team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/solar.py
+
+Files:
+python/sglang/srt/models/starcoder2.py
+
+# Copyright 2024 BigCode and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/starcoder2.py
+
+Files:
+python/sglang/srt/models/teleflm.py
+
+# Adapted from
+# https://github.com/huggingface/transformers/blob/v4.28.0/src/transformers/models/llama/modeling_llama.py
+# Copyright 2023 The vLLM team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+#
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/teleflm.py
+
+Files:
+python/sglang/srt/models/gemma3_causal.py
+python/sglang/srt/models/gemma3_mm.py
+python/sglang/srt/models/transformers.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/models/voxtral.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from:
+# https://github.com/vllm-project/vllm/blob/main/vllm/model_executor/models/voxtral.py
+# https://huggingface.co/mistralai/Voxtral-Mini-3B-2507
+#
+# Copyright 2025 Mistral AI and the HuggingFace Inc. team.
+# Licensed under the Apache License, Version 2.0.
+
+Files:
+python/sglang/srt/batch_overlap/single_batch_overlap.py
+python/sglang/srt/disaggregation/mooncake/utils.py
+python/sglang/srt/entrypoints/openai/serving_transcription.py
+python/sglang/srt/hardware_backend/npu/graph_runner/eagle_draft_npu_graph_runner.py
+python/sglang/srt/layers/clippable_linear.py
+python/sglang/srt/layers/quantization/fp4_kv_cache_quant_method.py
+python/sglang/srt/layers/quantization/kvfp4_tensor.py
+python/sglang/srt/mem_cache/events.py
+python/sglang/srt/mem_cache/utils.py
+python/sglang/srt/models/gemma4_audio.py
+python/sglang/srt/models/gemma4_causal.py
+python/sglang/srt/models/gemma4_mm.py
+python/sglang/srt/models/gemma4_vision.py
+python/sglang/srt/models/lightonocr.py
+python/sglang/srt/multimodal/audio_from_video.py
+python/sglang/srt/multimodal/evs/evs_module.py
+python/sglang/srt/multimodal/evs/evs_processor.py
+python/sglang/srt/multimodal/processors/gemma3n.py
+python/sglang/srt/multimodal/processors/gemma4.py
+python/sglang/srt/multimodal/processors/lightonocr.py
+
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/multimodal/evs/evs_core.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Copyright 2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/multimodal/evs.py
+
+Files:
+python/sglang/srt/multimodal/processors/cohere2_vision.py
+
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 SGLang Team
+
+Files:
+python/sglang/srt/multimodal/processors/deepseek_vl_v2.py
+
+# Copyright (c) 2023-2024 DeepSeek.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Files:
+python/sglang/srt/multimodal/processors/minimax_m3_vl.py
+
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+
+Files:
+python/sglang/srt/eplb/expert_location_dispatch.py
+python/sglang/srt/eplb/expert_location_updater.py
+python/sglang/srt/hardware_backend/npu/graph_runner/vit_npu_graph_runner.py
+python/sglang/srt/lora/lora_moe_runners.py
+python/sglang/srt/model_loader/auto_loader.py
+python/sglang/srt/models/ernie4.py
+python/sglang/srt/models/ernie45_moe_vl.py
+python/sglang/srt/models/ernie4_eagle.py
+python/sglang/srt/models/glmasr.py
+python/sglang/srt/models/gpt_j.py
+python/sglang/srt/models/nemotron_h_mtp.py
+python/sglang/srt/models/utils.py
+python/sglang/srt/multimodal/vit_cuda_graph_runner.py
+python/sglang/srt/observability/utils.py
+
+# Copyright 2023-2025 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/kernels/ops/grammar/token_filter_ops.py
+python/sglang/srt/constrained/torch_ops/token_filter_torch_ops.py
+python/sglang/srt/models/deepseek_common/deepseek_weight_loader.py
+python/sglang/srt/models/deepseek_common/utils.py
+python/sglang/srt/models/gemma4_mtp.py
+python/sglang/srt/models/gemma4_unified.py
+python/sglang/srt/models/inkling_common/__init__.py
+python/sglang/srt/multimodal/inkling/__init__.py
+python/sglang/srt/multimodal/inkling/processing_inkling.py
+python/sglang/srt/multimodal/processors/gemma4_unified.py
+python/sglang/srt/multimodal/processors/inkling.py
+python/sglang/srt/parser/template_detection.py
+python/sglang/srt/speculative/frozen_kv_mtp_info.py
+python/sglang/srt/speculative/frozen_kv_mtp_utils.py
+python/sglang/srt/speculative/frozen_kv_mtp_worker_v2.py
+
+# Copyright 2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/kernels/ops/attention/dcp_kernels.py
+python/sglang/kernels/ops/memory/virtual_slot.py
+python/sglang/kernels/ops/moe/deepep_waterfill_kernels.py
+python/sglang/kernels/ops/speculative/spec_tree.py
+python/sglang/srt/arg_groups/overrides.py
+python/sglang/srt/configs/muse_glimmer.py
+python/sglang/srt/configs/muse_glimmer_processing.py
+python/sglang/srt/hardware_backend/mlx/models/muse_glimmer_mlx.py
+python/sglang/srt/hardware_backend/mlx/remote_code_gate.py
+python/sglang/srt/layers/attention/linear/inkling_sconv_backend.py
+python/sglang/srt/layers/attention/linear/short_conv_backend.py
+python/sglang/srt/layers/attention/unified_mem_hooks.py
+python/sglang/srt/layers/cp/__init__.py
+python/sglang/srt/layers/cp/base.py
+python/sglang/srt/layers/cp/bcg.py
+python/sglang/srt/layers/cp/interleave.py
+python/sglang/srt/layers/cp/padding.py
+python/sglang/srt/layers/cp/utils.py
+python/sglang/srt/layers/cp/zigzag.py
+python/sglang/srt/layers/dcp/__init__.py
+python/sglang/srt/layers/dcp/comm.py
+python/sglang/srt/layers/dcp/layout.py
+python/sglang/srt/layers/dcp/metadata.py
+python/sglang/srt/layers/dcp/planner.py
+python/sglang/srt/layers/moe/waterfill.py
+python/sglang/srt/mem_cache/dsa_cache_layer_split.py
+python/sglang/srt/mem_cache/multi_ended_allocator.py
+python/sglang/srt/mem_cache/unified_memory_pool.py
+python/sglang/srt/model_executor/cuda_graph_buffer_registry.py
+python/sglang/srt/model_executor/cuda_graph_config.py
+python/sglang/srt/model_executor/runner/base_cuda_graph_runner.py
+python/sglang/srt/model_executor/runner/base_runner.py
+python/sglang/srt/model_executor/runner/decode_cuda_graph_runner.py
+python/sglang/srt/model_executor/runner/eager_runner.py
+python/sglang/srt/model_executor/runner/flashinfer_autotune.py
+python/sglang/srt/model_executor/runner/prefill_cuda_graph_runner.py
+python/sglang/srt/model_executor/runner/shape_key.py
+python/sglang/srt/model_executor/runner_backend/base_cuda_graph_backend.py
+python/sglang/srt/model_executor/runner_backend/breakable_cuda_graph_backend.py
+python/sglang/srt/model_executor/runner_backend/full_cuda_graph_backend.py
+python/sglang/srt/model_executor/runner_backend/tc_piecewise_cuda_graph_backend.py
+python/sglang/srt/model_executor/runner_backend/utils.py
+python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/breakable_cuda_graph.py
+python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/context.py
+python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/cuda_utils.py
+python/sglang/srt/model_executor/runner_utils/buffers.py
+python/sglang/srt/model_executor/runner_utils/capture_mode.py
+python/sglang/srt/model_executor/runner_utils/deepep_adapter.py
+python/sglang/srt/model_executor/runner_utils/pool.py
+python/sglang/srt/model_loader/gguf_name_maps.py
+python/sglang/srt/models/mellum.py
+python/sglang/srt/models/mistral_eagle.py
+python/sglang/srt/models/muse_glimmer.py
+python/sglang/srt/multimodal/internvl_vit_cuda_graph_runner.py
+python/sglang/srt/multimodal/processors/muse_glimmer.py
+python/sglang/srt/runtime_context.py
+python/sglang/srt/utils/aiter.py
+python/sglang/srt/utils/hf_transformers/gguf_native.py
+
+# Copyright 2023-2026 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/kernels/ops/attention/decode_attention.py
+python/sglang/kernels/ops/attention/extend_attention.py
+python/sglang/kernels/ops/attention/prefill_attention.py
+python/sglang/kernels/ops/attention/rocm_mla_decode_rope.py
+python/sglang/kernels/ops/attention/score_mod.py
+python/sglang/kernels/ops/memory/gpu_tensor_hash.py
+python/sglang/kernels/ops/speculative/fused_kv_materialize.py
+python/sglang/kernels/ops/speculative/multi_layer_eagle.py
+python/sglang/srt/arg_groups/arg_utils.py
+python/sglang/srt/checkpoint_engine/checkpoint_engine_worker.py
+python/sglang/srt/configs/model_config.py
+python/sglang/srt/constrained/base_grammar_backend.py
+python/sglang/srt/constrained/llguidance_backend.py
+python/sglang/srt/constrained/outlines_backend.py
+python/sglang/srt/constrained/outlines_jump_forward.py
+python/sglang/srt/constrained/reasoner_grammar_backend.py
+python/sglang/srt/constrained/xgrammar_backend.py
+python/sglang/srt/entrypoints/engine.py
+python/sglang/srt/entrypoints/engine_info_bootstrap_server.py
+python/sglang/srt/entrypoints/engine_score_mixin.py
+python/sglang/srt/entrypoints/http_server.py
+python/sglang/srt/entrypoints/openai/protocol.py
+python/sglang/srt/entrypoints/v1_loads.py
+python/sglang/srt/eplb/expert_distribution.py
+python/sglang/srt/eplb/expert_location.py
+python/sglang/srt/function_call/mimo_detector.py
+python/sglang/srt/hardware_backend/musa/utils/patch_torch.py
+python/sglang/srt/hardware_backend/npu/graph_runner/npu_graph_runner.py
+python/sglang/srt/hardware_backend/xpu/graph_runner/xpu_graph_runner.py
+python/sglang/srt/layers/activation.py
+python/sglang/srt/layers/communicator.py
+python/sglang/srt/layers/communicator_dsa_cp.py
+python/sglang/srt/layers/layernorm.py
+python/sglang/srt/layers/logits_processor.py
+python/sglang/srt/layers/moe/mega_moe.py
+python/sglang/srt/layers/moe/mega_moe_sm90.py
+python/sglang/srt/layers/radix_attention.py
+python/sglang/srt/lora/eviction_policy.py
+python/sglang/srt/lora/lora.py
+python/sglang/srt/lora/lora_config.py
+python/sglang/srt/lora/lora_drainer.py
+python/sglang/srt/lora/lora_manager.py
+python/sglang/srt/lora/lora_registry.py
+python/sglang/srt/managers/data_parallel_controller.py
+python/sglang/srt/managers/detokenizer_manager.py
+python/sglang/srt/managers/embed_types.py
+python/sglang/srt/managers/io_struct.py
+python/sglang/srt/managers/multi_tokenizer_mixin.py
+python/sglang/srt/managers/schedule_batch.py
+python/sglang/srt/managers/schedule_policy.py
+python/sglang/srt/managers/scheduler.py
+python/sglang/srt/managers/scheduler_input_blocker.py
+python/sglang/srt/managers/tokenizer_manager.py
+python/sglang/srt/managers/tp_worker.py
+python/sglang/srt/model_executor/cpu_graph_runner.py
+python/sglang/srt/model_executor/forward_batch_info.py
+python/sglang/srt/model_executor/model_runner.py
+python/sglang/srt/model_executor/step_span_utils.py
+python/sglang/srt/models/afmoe.py
+python/sglang/srt/models/arcee.py
+python/sglang/srt/models/chatglm.py
+python/sglang/srt/models/dbrx.py
+python/sglang/srt/models/deepseek_janus_pro.py
+python/sglang/srt/models/deepseek_nextn.py
+python/sglang/srt/models/dots3_common/modeling.py
+python/sglang/srt/models/gemma.py
+python/sglang/srt/models/gemma2.py
+python/sglang/srt/models/gemma2_reward.py
+python/sglang/srt/models/glm4.py
+python/sglang/srt/models/glm4_moe_nextn.py
+python/sglang/srt/models/glm4v.py
+python/sglang/srt/models/glm_ocr.py
+python/sglang/srt/models/glm_ocr_nextn.py
+python/sglang/srt/models/gpt_bigcode.py
+python/sglang/srt/models/gpt_oss.py
+python/sglang/srt/models/granite.py
+python/sglang/srt/models/grok.py
+python/sglang/srt/models/hrm_text.py
+python/sglang/srt/models/internlm2.py
+python/sglang/srt/models/internlm2_reward.py
+python/sglang/srt/models/iquest_loopcoder.py
+python/sglang/srt/models/llama_classification.py
+python/sglang/srt/models/llama_reward.py
+python/sglang/srt/models/llava.py
+python/sglang/srt/models/llavavid.py
+python/sglang/srt/models/mimo_v2.py
+python/sglang/srt/models/mimo_v2_nextn.py
+python/sglang/srt/models/minicpm.py
+python/sglang/srt/models/minicpm3.py
+python/sglang/srt/models/minicpmo.py
+python/sglang/srt/models/minimax_m2.py
+python/sglang/srt/models/minimax_m3.py
+python/sglang/srt/models/mistral.py
+python/sglang/srt/models/olmo.py
+python/sglang/srt/models/opt.py
+python/sglang/srt/models/qwen2.py
+python/sglang/srt/models/qwen2_classification.py
+python/sglang/srt/models/qwen2_rm.py
+python/sglang/srt/models/qwen3_5_mtp.py
+python/sglang/srt/models/qwen3_classification.py
+python/sglang/srt/models/qwen3_moe.py
+python/sglang/srt/models/qwen3_moe_mtp.py
+python/sglang/srt/models/qwen3_next_mtp.py
+python/sglang/srt/models/qwen3_rm.py
+python/sglang/srt/models/sarashina2_vision.py
+python/sglang/srt/models/stablelm.py
+python/sglang/srt/models/xverse_moe.py
+python/sglang/srt/models/yivl.py
+python/sglang/srt/multimodal/mm_utils.py
+python/sglang/srt/observability/func_timer.py
+python/sglang/srt/observability/metrics_collector.py
+python/sglang/srt/observability/ray_wrappers.py
+python/sglang/srt/observability/req_time_stats.py
+python/sglang/srt/observability/trace.py
+python/sglang/srt/observability/trace_async.py
+python/sglang/srt/parser/code_completion_parser.py
+python/sglang/srt/parser/conversation.py
+python/sglang/srt/parser/template_manager.py
+python/sglang/srt/ray/data_parallel_controller.py
+python/sglang/srt/ray/engine.py
+python/sglang/srt/ray/http_server.py
+python/sglang/srt/ray/scheduler_actor.py
+python/sglang/srt/sampling/sampling_params.py
+python/sglang/srt/server_args.py
+python/sglang/srt/speculative/multi_layer_eagle_draft_extend_cuda_graph_runner.py
+python/sglang/srt/speculative/multi_layer_eagle_utils.py
+python/sglang/srt/speculative/multi_layer_eagle_worker_v2.py
+python/sglang/srt/utils/common.py
+python/sglang/srt/utils/cudacore_pyspy_dump_utils.py
+python/sglang/srt/utils/field_validators.py
+python/sglang/srt/utils/hf_transformers/__init__.py
+python/sglang/srt/utils/hf_transformers/common.py
+python/sglang/srt/utils/hf_transformers/config.py
+python/sglang/srt/utils/hf_transformers/processor.py
+python/sglang/srt/utils/hf_transformers/tokenizer.py
+python/sglang/srt/utils/hf_transformers_patches.py
+python/sglang/srt/utils/hf_transformers_utils.py
+python/sglang/srt/utils/nvtx_pytorch_hooks.py
+python/sglang/srt/utils/nvtx_utils.py
+python/sglang/srt/utils/patch_torch.py
+python/sglang/srt/utils/request_logger.py
+python/sglang/srt/utils/token_sequence_matcher.py
+
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/session/session_controller.py
+
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+Files:
+python/sglang/srt/utils/hf_transformers/mistral_utils.py
+
+# Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/transformers_utils/configs/mistral.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+Files:
+python/sglang/srt/utils/runai_utils.py
+
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+# Adapted from https://github.com/vllm-project/vllm/blob/v0.6.4.post1/vllm/model_executor/model_loader/runai_utils.py
+
+Files:
+python/sglang/srt/utils/tensor_bridge.py
+
+# Copied and adapted from: https://github.com/vllm-project/vllm-metal
+# SPDX-License-Identifier: Apache-2.0
+
+Files:
+python/sglang/srt/weight_cache/__init__.py
+
+# SPDX-License-Identifier: Apache-2.0
+#
+# Intentionally empty: importing any weight_cache submodule (e.g.
+# ``sglang.srt.weight_cache.protocol``) executes this package __init__ first.
+# Eagerly re-exporting daemon/ipc_loader here would pull in torch and the model
+# loader on that cheap protocol import, re-introducing the circular-import and
+# startup-cost problems the local-import refactor removed. Import the concrete
+# symbols from their submodules instead, e.g.
+#     from sglang.srt.weight_cache.protocol import CacheConfig
+#     from sglang.srt.weight_cache.daemon import launch_weight_cache_daemons
+#     from sglang.srt.weight_cache.ipc_loader import IpcModelLoader

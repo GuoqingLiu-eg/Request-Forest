@@ -1,0 +1,8 @@
+recursive-include python/sglang/kernels/jit *
+recursive-include python/sglang/kernels/ops *
+recursive-include python/sglang/srt *.json *.jinja2 *.txt
+recursive-include native *.so
+recursive-include scripts *.py
+recursive-include configs *.json
+include launch.py
+global-exclude *.pyc

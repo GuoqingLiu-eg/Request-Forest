@@ -1,0 +1,7 @@
+{
+  "model_id": "Qwen3.6-35B-A3B",
+  "draft_model_hint": "Matching Qwen3.6-35B-A3B-DFlash2 checkpoint, dequantized to BF16",
+  "environment": {
+    "SGLANG_RF_PREFILL_COALESCE_QUIET_MS": "4"
+  }
+}

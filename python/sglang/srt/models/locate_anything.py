@@ -1,0 +1,304 @@
+# SPDX-License-Identifier: Apache-2.0
+# Adapted from https://huggingface.co/nvidia/LocateAnything-3B/blob/main/modeling_locateanything.py
+# and from vllm-project/vllm PR #44182.
+
+
+import logging
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+
+import torch
+from torch import nn
+
+from sglang.srt.configs.kimi_vl_moonvit import MoonViTConfig
+from sglang.srt.configs.locate_anything import LocateAnythingConfig
+from sglang.srt.layers.quantization.base_config import QuantizationConfig
+from sglang.srt.managers.mm_utils import (
+    MultiModalityDataPaddingPatternMultimodalTokens,
+    general_mm_embed_routine,
+)
+from sglang.srt.managers.schedule_batch import (
+    Modality,
+    MultimodalDataItem,
+    MultimodalInputs,
+)
+from sglang.srt.model_executor.forward_batch_info import ForwardBatch
+from sglang.srt.model_loader.weight_utils import default_weight_loader
+from sglang.srt.models.kimi_vl_moonvit import MoonVitPretrainedModel
+from sglang.srt.models.qwen2 import Qwen2ForCausalLM
+from sglang.srt.sampling.custom_logit_processor import CustomLogitProcessor
+from sglang.srt.utils import add_prefix
+
+logger = logging.getLogger(__name__)
+
+
+class LocateAnythingMultiModalProjector(nn.Module):
+
+
+    def __init__(self, config: LocateAnythingConfig):
+        super().__init__()
+
+        merge = config.vision_config.merge_kernel_size
+        self.merged_size = config.vision_config.hidden_size * merge[0] * merge[1]
+        text_hidden = config.text_config.hidden_size
+
+        self.pre_norm = nn.LayerNorm(self.merged_size, eps=1e-5)
+        self.linear_1 = nn.Linear(self.merged_size, text_hidden, bias=True)
+
+        self.act = nn.GELU()
+        self.linear_2 = nn.Linear(text_hidden, text_hidden, bias=True)
+
+    def forward(self, image_features: torch.Tensor) -> torch.Tensor:
+
+
+        hidden_states = image_features.reshape(-1, self.merged_size)
+        hidden_states = self.pre_norm(hidden_states)
+        hidden_states = self.linear_1(hidden_states)
+        hidden_states = self.act(hidden_states)
+        hidden_states = self.linear_2(hidden_states)
+        return hidden_states
+
+
+class LocateAnythingForConditionalGeneration(nn.Module):
+    def __init__(
+        self,
+        config: LocateAnythingConfig,
+        quant_config: Optional[QuantizationConfig] = None,
+        prefix: str = "",
+        **kwargs,
+    ) -> None:
+        super().__init__()
+        self.config = config
+        assert isinstance(config.vision_config, MoonViTConfig)
+
+        self.vision_tower = MoonVitPretrainedModel(config.vision_config)
+        self.multi_modal_projector = LocateAnythingMultiModalProjector(config)
+        self.quant_config = quant_config
+
+        self.language_model = Qwen2ForCausalLM(
+            config=config.text_config,
+            quant_config=quant_config,
+            prefix=add_prefix("language_model", prefix),
+        )
+
+    def get_image_feature(self, items: List[MultimodalDataItem]) -> torch.Tensor:
+        pixel_values = (
+            torch.cat([item.feature for item in items], dim=0)
+            .type(self.vision_tower.dtype)
+            .to(self.vision_tower.device)
+        )
+
+
+        if (
+            pixel_values.dim() == 2
+            and pixel_values.shape[-1] == self.config.text_config.hidden_size
+        ):
+            return pixel_values
+
+
+        image_grid_hws = torch.cat(
+            [torch.as_tensor(item.image_grid_hws) for item in items], dim=0
+        ).to(self.vision_tower.device)
+        image_features = self.vision_tower(pixel_values, image_grid_hws)
+        assert isinstance(image_features, list)
+        return self.multi_modal_projector(torch.cat(image_features))
+
+    def pad_input_ids(self, input_ids: List[int], mm_inputs: MultimodalInputs):
+        pattern = MultiModalityDataPaddingPatternMultimodalTokens()
+        return pattern.pad_input_tokens(input_ids, mm_inputs)
+
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        positions: torch.Tensor,
+        forward_batch: ForwardBatch,
+        get_embedding: bool = False,
+    ):
+        hidden_states = general_mm_embed_routine(
+            input_ids=input_ids,
+            forward_batch=forward_batch,
+            language_model=self.language_model,
+            data_embedding_funcs={
+                Modality.IMAGE: self.get_image_feature,
+            },
+            positions=positions,
+        )
+        return hidden_states
+
+    def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]) -> Set[str]:
+
+        prefix_mapping = {
+            "vision_model.": "vision_tower.",
+            "mlp1.0.": "multi_modal_projector.pre_norm.",
+            "mlp1.1.": "multi_modal_projector.linear_1.",
+            "mlp1.3.": "multi_modal_projector.linear_2.",
+        }
+
+
+        stacked_params_mapping = [
+            (".qkv_proj", ".q_proj", "q"),
+            (".qkv_proj", ".k_proj", "k"),
+            (".qkv_proj", ".v_proj", "v"),
+            (".gate_up_proj", ".gate_proj", 0),
+            (".gate_up_proj", ".up_proj", 1),
+        ]
+
+        tie_word_embeddings = getattr(
+            self.config.text_config, "tie_word_embeddings", False
+        )
+
+        params_dict = dict(self.named_parameters())
+        loaded_params: Set[str] = set()
+
+        for name, loaded_weight in weights:
+            for src, dst in prefix_mapping.items():
+                if name.startswith(src):
+                    name = dst + name[len(src) :]
+                    break
+
+            if "rotary_emb.inv_freq" in name:
+                continue
+            if "rotary_emb.cos_cached" in name or "rotary_emb.sin_cached" in name:
+                continue
+
+
+            if tie_word_embeddings and name.startswith("language_model.lm_head."):
+                continue
+
+            is_vision_weight = name.startswith("vision_tower.") or name.startswith(
+                "multi_modal_projector."
+            )
+
+            if is_vision_weight:
+                if name.endswith(".bias") and name not in params_dict:
+                    continue
+                if name not in params_dict:
+                    logger.warning(f"Parameter {name} not found in params_dict")
+                    continue
+                param = params_dict[name]
+                weight_loader = getattr(param, "weight_loader", default_weight_loader)
+                weight_loader(param, loaded_weight)
+                loaded_params.add(name)
+                continue
+
+
+            for param_name, weight_name, shard_id in stacked_params_mapping:
+                if weight_name not in name:
+                    continue
+                mapped = name.replace(weight_name, param_name)
+                if mapped.endswith(".bias") and mapped not in params_dict:
+                    continue
+                if mapped not in params_dict:
+                    continue
+                param = params_dict[mapped]
+                param.weight_loader(param, loaded_weight, shard_id)
+                loaded_params.add(mapped)
+                break
+            else:
+                if name.endswith(".bias") and name not in params_dict:
+                    continue
+                if name not in params_dict:
+                    logger.warning(f"Parameter {name} not found in params_dict")
+                    continue
+                param = params_dict[name]
+                weight_loader = getattr(param, "weight_loader", default_weight_loader)
+                weight_loader(param, loaded_weight)
+                loaded_params.add(name)
+
+
+        missing = set(params_dict.keys()) - loaded_params
+        if tie_word_embeddings:
+            missing = {
+                n for n in missing if not n.startswith("language_model.lm_head.")
+            }
+        if missing:
+            logger.warning(
+                f"LocateAnything: {len(missing)} parameters did not receive "
+                f"weights, e.g. {sorted(missing)[:10]}"
+            )
+
+        return loaded_params
+
+
+class LocateAnythingBoxGrammarLogitProcessor(CustomLogitProcessor):
+
+
+    @classmethod
+    def build_sampling_params(cls, config: "LocateAnythingConfig") -> Dict[str, Any]:
+
+        return {
+            "custom_logit_processor": cls.to_str(),
+            "custom_params": {
+                "box_start_token_id": config.box_start_token_id,
+                "box_end_token_id": config.box_end_token_id,
+                "coord_start_token_id": config.coord_start_token_id,
+                "coord_end_token_id": config.coord_end_token_id,
+                "none_token_id": config.none_token_id,
+            },
+        }
+
+    def __call__(
+        self,
+        logits: torch.Tensor,
+        custom_param_list: Optional[List[Dict[str, Any]]] = None,
+    ) -> torch.Tensor:
+        if not custom_param_list:
+            return logits
+
+        neg_inf = float("-inf")
+        for batch_idx, params in enumerate(custom_param_list):
+            if not params:
+                continue
+            req = params.get("__req__")
+            if req is None:
+                continue
+
+            box_start = params.get("box_start_token_id")
+            box_end = params.get("box_end_token_id")
+            coord_start = params.get("coord_start_token_id")
+            coord_end = params.get("coord_end_token_id")
+            none_id = params.get("none_token_id")
+            if None in (box_start, box_end, coord_start, coord_end, none_id):
+                continue
+
+
+            output_ids = list(req.output_ids)
+
+
+            try:
+                last_open = len(output_ids) - 1 - output_ids[::-1].index(box_start)
+            except ValueError:
+                continue
+            body = output_ids[last_open + 1 :]
+            if box_end in body:
+                continue
+
+            num_coords = sum(1 for t in body if coord_start <= t <= coord_end)
+            has_none = none_id in body
+
+
+            allow_coords = False
+            allow_scalars: Set[int] = set()
+            if has_none:
+                allow_scalars = {box_end}
+            elif num_coords == 0:
+                allow_coords, allow_scalars = True, {none_id}
+            elif num_coords in (1, 3):
+                allow_coords = True
+            elif num_coords == 2:
+                allow_coords, allow_scalars = True, {box_end}
+            else:
+                allow_scalars = {box_end}
+
+            mask = torch.full_like(logits[batch_idx], neg_inf)
+            if allow_coords:
+                mask[coord_start : coord_end + 1] = logits[
+                    batch_idx, coord_start : coord_end + 1
+                ]
+            for tok in allow_scalars:
+                mask[tok] = logits[batch_idx, tok]
+            logits[batch_idx] = mask
+
+        return logits
+
+
+EntryClass = [LocateAnythingForConditionalGeneration]

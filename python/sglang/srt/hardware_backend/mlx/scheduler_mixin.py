@@ -1,0 +1,188 @@
+from __future__ import annotations
+
+import logging
+import time
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING, List, Optional
+
+import mlx.core as mx
+
+from sglang.srt.environ import envs
+from sglang.srt.managers.overlap_utils import resolve_forward_inputs
+from sglang.srt.runtime_context import get_device
+from sglang.srt.utils import DynamicGradMode
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from sglang.srt.hardware_backend.mlx.tp_worker import MlxLaunch
+    from sglang.srt.managers.schedule_batch import Req, ScheduleBatch
+    from sglang.srt.managers.scheduler import Scheduler
+
+
+@dataclass
+class MlxPendingJob:
+
+
+    launch: MlxLaunch
+    batch_copy: ScheduleBatch
+    schedule_batch: ScheduleBatch
+    reqs: List[Req]
+
+    chain_safe: bool = True
+
+
+    extend_input_len_per_req: Optional[List[int]] = None
+    extend_logprob_start_len_per_req: Optional[List[int]] = None
+
+
+class SchedulerMlxOverlapMixin:
+
+
+    def _mlx_batch_chain_safe(self: Scheduler, batch: ScheduleBatch) -> bool:
+
+        if not get_device().mlx_enable_sampling:
+            return True
+        sampling_info = batch.sampling_info
+        if sampling_info is None:
+            return True
+
+
+        return not (batch.has_grammar or sampling_info.has_custom_logit_processor)
+
+    def _prepare_mlx_launch(self: Scheduler, batch: ScheduleBatch):
+
+
+        self.forward_ct += 1
+        batch.forward_iter = self.forward_ct
+        batch.launch_ts = time.monotonic()
+        self.profiler_manager._profile_batch_predicate(batch)
+
+    def _finalize_mlx_pending_job(self: Scheduler, pending: MlxPendingJob):
+        result = self.tp_worker.finalize_mlx_result(pending.launch, pending.reqs)
+        result.extend_input_len_per_req = pending.extend_input_len_per_req
+        result.extend_logprob_start_len_per_req = (
+            pending.extend_logprob_start_len_per_req
+        )
+        if result.next_token_ids is not None:
+            pending.batch_copy.input_ids = result.next_token_ids
+            pending.schedule_batch.input_ids = result.next_token_ids
+        self.last_batch = pending.schedule_batch
+        self.process_batch_result(pending.batch_copy, result)
+
+    @DynamicGradMode()
+    def event_loop_overlap_mlx(self: Scheduler):
+
+        pending_curr: Optional[MlxPendingJob] = None
+        pending_next: Optional[MlxPendingJob] = None
+
+        def _launch_fresh(batch: ScheduleBatch) -> MlxPendingJob:
+            self._prepare_mlx_launch(batch)
+
+
+            resolve_forward_inputs(batch, self.future_map)
+            launch = self.tp_worker.async_forward_batch_generation_mlx(batch)
+            extend_input_len_per_req = None
+            extend_logprob_start_len_per_req = None
+            if batch.return_logprob:
+
+                extend_input_len_per_req = [
+                    req.extend_range.length if req.extend_range is not None else 0
+                    for req in batch.reqs
+                ]
+                extend_logprob_start_len_per_req = batch.extend_logprob_start_lens
+            return MlxPendingJob(
+                launch=launch,
+                batch_copy=batch.copy(),
+                schedule_batch=batch,
+                reqs=list(batch.reqs),
+                chain_safe=self._mlx_batch_chain_safe(batch),
+                extend_input_len_per_req=extend_input_len_per_req,
+                extend_logprob_start_len_per_req=extend_logprob_start_len_per_req,
+            )
+
+        def _launch_chained(prev: MlxPendingJob) -> MlxPendingJob:
+            assert prev.launch.decode is not None
+
+
+            batch_copy = prev.batch_copy.copy()
+            self._prepare_mlx_launch(batch_copy)
+
+
+            prev.schedule_batch.forward_iter = batch_copy.forward_iter
+            return replace(
+                prev,
+                launch=self.tp_worker.async_chained_decode_mlx(prev.launch.decode),
+                batch_copy=batch_copy,
+            )
+
+        while True:
+            if self.gracefully_exit:
+
+
+                mx.synchronize()
+                break
+
+            recv_reqs = self.request_receiver.recv_requests()
+            self.process_input_requests(recv_reqs)
+            if self._engine_paused:
+                continue
+
+
+            can_chain = (
+                pending_curr is not None
+                and pending_curr.launch.mode == "decode"
+                and pending_curr.launch.decode is not None
+                and pending_curr.chain_safe
+                and not self.waiting_queue
+            )
+            if can_chain and pending_next is None:
+
+
+                pending_next = _launch_chained(pending_curr)
+                self.result_queue.append(pending_next)
+
+
+            if pending_curr is not None:
+                self._finalize_mlx_pending_job(pending_curr)
+                self.result_queue.popleft()
+                pending_curr = None
+
+
+            finished_any = any(
+                req.finished() for req in (pending_next.reqs if pending_next else [])
+            )
+            new_prefill_waiting = bool(self.waiting_queue)
+            if (
+                pending_next is not None
+                and not finished_any
+                and not new_prefill_waiting
+            ):
+                pending_curr = pending_next
+                pending_next = None
+                self.cur_batch_for_debug = pending_curr.schedule_batch
+                self.last_batch = pending_curr.schedule_batch
+                if envs.SGLANG_ENABLE_STRICT_MEM_CHECK_DURING_BUSY.get():
+                    self.invariant_checker.self_check_during_busy()
+                continue
+
+
+            if pending_next is not None:
+                self._finalize_mlx_pending_job(pending_next)
+                self.result_queue.popleft()
+                pending_next = None
+            plan = self.get_next_batch_to_run(
+                running_batch=self.running_batch, last_batch=self.last_batch
+            )
+            self.running_batch = plan.running_batch
+            next_batch = plan.batch_to_run
+            self.cur_batch_for_debug = next_batch
+            if next_batch:
+                pending_curr = _launch_fresh(next_batch)
+                self.result_queue.append(pending_curr)
+            else:
+                self.on_idle()
+
+            self.last_batch = next_batch
+            if envs.SGLANG_ENABLE_STRICT_MEM_CHECK_DURING_BUSY.get():
+                self.invariant_checker.self_check_during_busy()

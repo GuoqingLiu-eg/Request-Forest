@@ -1,0 +1,9 @@
+import warnings
+
+warnings.warn(
+    "sglang.srt.layers.attention.nsa.transform_index is deprecated; "
+    "use sglang.kernels.ops.attention.dsa.transform_index instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+from sglang.kernels.ops.attention.dsa.transform_index import *

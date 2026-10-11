@@ -1,0 +1,475 @@
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+
+import logging
+import re
+from typing import Dict, List, Optional
+
+import torch
+from torch import nn
+
+from sglang.srt.configs.load_config import LoadConfig
+from sglang.srt.layers.utils import get_layer_id
+from sglang.srt.lora.backend.base_backend import BaseLoRABackend
+from sglang.srt.lora.lora_config import LoRAConfig
+from sglang.srt.model_loader.loader import DefaultModelLoader
+from sglang.srt.utils.hf_transformers_utils import AutoConfig
+
+
+_ROUTED_EXPERT_PATTERN = re.compile(r"\.experts\.")
+
+logger = logging.getLogger(__name__)
+
+
+class LoRALayer(nn.Module):
+    def __init__(self, config: LoRAConfig, base_hf_config: AutoConfig):
+        super().__init__()
+        self.config: LoRAConfig = config
+        self.base_hf_config: AutoConfig = base_hf_config
+
+
+        self.weights: Dict[str, torch.Tensor] = {}
+        self.pinned_weights: Dict[str, torch.Tensor] = {}
+
+
+class LoRAAdapter(nn.Module):
+    def __init__(
+        self,
+        uid: str,
+        config: LoRAConfig,
+        base_hf_config: AutoConfig,
+        load_config: LoadConfig,
+        lora_backend: BaseLoRABackend,
+        base_model: Optional[torch.nn.Module] = None,
+    ):
+        super().__init__()
+        self.uid: str = uid
+        self.config: LoRAConfig = config
+        assert self.config.hf_config["peft_type"].lower() == "lora"
+        self.base_hf_config: AutoConfig = base_hf_config
+        self.load_config: LoadConfig = load_config
+        self.lora_backend: BaseLoRABackend = lora_backend
+        self.scaling: float = self.config.lora_alpha / self.config.r
+
+
+        object.__setattr__(self, "base_model", base_model)
+        object.__setattr__(
+            self,
+            "_moe_is_gated_by_layer",
+            self._build_moe_gated_map(base_model) if base_model is not None else {},
+        )
+
+        self.layers: List[LoRALayer] = nn.ModuleList(
+            [
+                LoRALayer(config, base_hf_config)
+                for _ in range(base_hf_config.num_hidden_layers)
+            ]
+        )
+
+        self.embedding_layers: Dict[str, torch.Tensor] = {}
+        self.pinned_embedding_layers: Dict[str, torch.Tensor] = {}
+        self.added_tokens_embeddings: Dict[str, torch.Tensor] = {}
+        self.pinned_added_tokens_embeddings: Dict[str, torch.Tensor] = {}
+
+    @staticmethod
+    def _build_moe_gated_map(base_model: torch.nn.Module) -> Dict[int, bool]:
+
+        from sglang.srt.layers.moe.fused_moe_triton.layer import FusedMoE
+
+        gated_map: Dict[int, bool] = {}
+        for name, module in base_model.named_modules():
+            inner = (
+                module
+                if isinstance(module, FusedMoE)
+                else getattr(module, "base_layer", None)
+            )
+            if not isinstance(inner, FusedMoE):
+                continue
+            layer_id = get_layer_id(name)
+            if layer_id is not None:
+                gated_map[layer_id] = bool(inner.moe_runner_config.is_gated)
+        return gated_map
+
+    def _is_non_gated_moe_weight(self, weight_name: str) -> bool:
+
+        if not _ROUTED_EXPERT_PATTERN.search(weight_name):
+            return False
+        layer_id = get_layer_id(weight_name)
+        if layer_id is None:
+            return False
+        return self._moe_is_gated_by_layer.get(layer_id) is False
+
+    def initialize_weights(self):
+        model_path = self.config.path
+        loader = DefaultModelLoader(self.load_config)
+        revision = getattr(self.config.hf_config, "revision", None)
+
+
+        for name, loaded_weight in loader._get_weights_iterator(
+            DefaultModelLoader.Source(
+                model_path, revision=revision, fall_back_to_pt=True
+            )
+        ):
+            self._process_weight(name, loaded_weight)
+
+        self._normalize_weights()
+
+    def initialize_weights_from_tensors(self, tensors: Dict[str, torch.Tensor]):
+        for name, tensor in tensors.items():
+            self._process_weight(name, tensor)
+
+        self._normalize_weights()
+
+    def _process_weight(self, name: str, loaded_weight: torch.Tensor):
+        from sglang.srt.lora.utils import get_normalized_target_modules
+
+        normalized_target_modules = get_normalized_target_modules(
+            self.config.target_modules
+        )
+
+
+        if "unembed_tokens" in name:
+            name = name.replace("unembed_tokens", "lm_head")
+
+        layer_id = get_layer_id(name)
+        if layer_id is not None:
+            self.layers[layer_id].weights[name] = loaded_weight.cpu()
+        elif "embed_tokens" in name or "lm_head" in name:
+
+
+            module_name = "embed_tokens" if "embed_tokens" in name else "lm_head"
+            if (
+                "all" in normalized_target_modules
+                or module_name in normalized_target_modules
+            ):
+                self.embedding_layers[name] = loaded_weight.cpu()
+            else:
+                logger.debug(
+                    f"Skipping {name} as '{module_name}' is not in adapter's target_modules: {self.config.target_modules}"
+                )
+        elif "input_embeddings" in name or "output_embeddings" in name:
+
+            self.added_tokens_embeddings[name] = loaded_weight.cpu()
+            assert loaded_weight.shape[0] == self.config.lora_added_tokens_size, (
+                f"LoRA adapter {self.uid} has lora_added_tokens_size {self.config.lora_added_tokens_size} specified in the config, "
+                f"but the loaded weight '{name}' has shape {loaded_weight.shape[0]} in first dimension"
+            )
+
+    def _normalize_weights(self):
+        for layer in self.layers:
+            weight_names = list(layer.weights.keys())
+            self.normalize_qkv_proj(weight_names, layer.weights)
+            self.normalize_inkling_qkvr_proj(weight_names, layer.weights)
+            self._normalize_shared_expert_moe(layer.weights)
+            self._rename_expert_w_to_proj(layer.weights)
+
+            self._normalize_in_proj(layer.weights)
+
+            self._normalize_in_proj_qkvz(layer.weights)
+            weight_names = list(layer.weights.keys())
+            self.normalize_gate_up_proj(weight_names, layer.weights)
+            weight_names = list(layer.weights.keys())
+            self.normalize_fused_qkv_a_proj(weight_names, layer.weights)
+
+    def normalize_inkling_qkvr_proj(
+        self, weight_names: List[str], weights: Dict[str, torch.Tensor]
+    ):
+
+        for weight_name in weight_names:
+            if "wq_du" not in weight_name:
+                continue
+
+            q_name = weight_name
+            k_name = weight_name.replace("wq_du", "wk_dv")
+            v_name = weight_name.replace("wq_du", "wv_dv")
+            r_name = weight_name.replace("wq_du", "wr_du")
+            qkvr_name = weight_name.replace("wq_du", "qkvr")
+
+            if any(name not in weights for name in (k_name, v_name, r_name)):
+                continue
+
+            cat_dim = weights[q_name].dim() - 2
+            weights[qkvr_name] = torch.cat(
+                (
+                    weights[q_name],
+                    weights[k_name],
+                    weights[v_name],
+                    weights[r_name],
+                ),
+                cat_dim,
+            )
+            weights.pop(q_name)
+            weights.pop(k_name)
+            weights.pop(v_name)
+            weights.pop(r_name)
+
+        for weight_name in list(weights.keys()):
+            if "qkvr" not in weight_name or "lora_A" not in weight_name:
+                continue
+            if weights[weight_name].shape[-2] != self.config.r:
+                continue
+            repeat_dims = [1] * weights[weight_name].dim()
+            repeat_dims[-2] = 4
+            weights[weight_name] = weights[weight_name].repeat(*repeat_dims)
+
+    def normalize_qkv_proj(
+        self, weight_names: List[str], weights: Dict[str, torch.Tensor]
+    ):
+
+        target_module = set()
+        for weight_name in weight_names:
+            if "k_proj" in weight_name:
+                target_module.add("k_proj")
+            if "q_proj" in weight_name:
+                target_module.add("q_proj")
+            if "v_proj" in weight_name:
+                target_module.add("v_proj")
+            if "qkv_proj" in weight_name:
+                target_module.add("qkv_proj")
+        if len(target_module) == 0:
+            return
+
+        for weight_name in weight_names:
+
+            if "q_proj" in weight_name:
+                q_name = weight_name
+                k_name = weight_name.replace("q_proj", "k_proj")
+                v_name = weight_name.replace("q_proj", "v_proj")
+                qkv_name = weight_name.replace("q_proj", "qkv_proj")
+
+
+                k_proj_weight = (
+                    weights[k_name]
+                    if "k_proj" in target_module
+                    else torch.zeros_like(weights[v_name])
+                )
+                weights[qkv_name] = torch.cat(
+                    (
+                        weights[q_name],
+                        k_proj_weight,
+                        weights[v_name],
+                    ),
+                    0,
+                )
+                weights.pop(q_name)
+                if "k_proj" in target_module:
+                    weights.pop(k_name)
+                weights.pop(v_name)
+            elif "qkv_proj" in weight_name:
+
+                qkv_name = weight_name
+                q_name = weight_name.replace("qkv_proj", "q_proj")
+                k_name = weight_name.replace("qkv_proj", "k_proj")
+                v_name = weight_name.replace("qkv_proj", "v_proj")
+                if "lora_A" in weight_name:
+                    weights[qkv_name] = weights[qkv_name].repeat(3, 1)
+
+
+    def _normalize_shared_expert_moe(self, weights: Dict[str, torch.Tensor]):
+
+
+        cfg = self.base_hf_config
+        if hasattr(cfg, "get_text_config"):
+            cfg = cfg.get_text_config()
+        archs = list(getattr(self.base_hf_config, "architectures", None) or [])
+        archs += list(getattr(cfg, "architectures", None) or [])
+        is_inkling = (
+            any("Inkling" in arch for arch in archs)
+            or "inkling" in str(getattr(cfg, "model_type", "")).lower()
+        )
+        if not is_inkling:
+            return
+        num_shared = getattr(cfg, "n_shared_experts", 0) or 0
+        if num_shared <= 0:
+            return
+        for name in list(weights.keys()):
+            if "shared_experts." not in name:
+                continue
+            if re.search(r"shared_experts\.\d+\.", name):
+
+
+                continue
+            is_down = any(k in name for k in (".w2.", ".down_proj."))
+            is_gate_up = any(
+                k in name
+                for k in (
+                    ".w1.",
+                    ".w3.",
+                    ".gate_proj.",
+                    ".up_proj.",
+                    ".gate_up_proj.",
+                )
+            )
+            if not (is_down or is_gate_up):
+                continue
+            w = weights[name]
+            if w.dim() != 2:
+                continue
+            if "lora_A" in name:
+                if is_down:
+                    r, flat = w.shape
+                    weights[name] = w.reshape(r, num_shared, flat // num_shared)
+                    weights[name] = weights[name].transpose(0, 1).contiguous()
+                else:
+                    weights[name] = w.unsqueeze(0)
+            else:
+                if is_down:
+                    weights[name] = w.unsqueeze(0)
+                else:
+                    flat, r = w.shape
+                    weights[name] = w.reshape(num_shared, flat // num_shared, r)
+
+    def _rename_expert_w_to_proj(self, weights: Dict[str, torch.Tensor]):
+
+        renames = {}
+        for name in list(weights.keys()):
+            new_name = name
+            if ".w1." in name:
+                new_name = name.replace(".w1.", ".gate_proj.")
+            elif ".w3." in name:
+                new_name = name.replace(".w3.", ".up_proj.")
+            elif ".w2." in name:
+                new_name = name.replace(".w2.", ".down_proj.")
+            if new_name != name:
+                renames[name] = new_name
+        for old_name, new_name in renames.items():
+            weights[new_name] = weights.pop(old_name)
+
+    def _normalize_in_proj(self, weights: Dict[str, torch.Tensor]):
+
+
+        for weight_name in list(weights.keys()):
+            if "gate_proj" not in weight_name:
+                continue
+            x_name = weight_name.replace("gate_proj", "x_proj")
+            if x_name not in weights:
+                continue
+
+            in_proj_name = weight_name.replace("gate_proj", "in_proj")
+            cat_dim = weights[weight_name].dim() - 2
+            weights[in_proj_name] = torch.cat(
+                (weights[weight_name], weights[x_name]), cat_dim
+            )
+            weights.pop(weight_name)
+            weights.pop(x_name)
+
+    def _normalize_in_proj_qkvz(self, weights: Dict[str, torch.Tensor]):
+
+        for weight_name in list(weights.keys()):
+            if "in_proj_q." in weight_name:
+                k_name = weight_name.replace("in_proj_q", "in_proj_k")
+                v_name = weight_name.replace("in_proj_q", "in_proj_v")
+                z_name = weight_name.replace("in_proj_q", "in_proj_z")
+                if (
+                    k_name not in weights
+                    or v_name not in weights
+                    or z_name not in weights
+                ):
+                    continue
+                qkvz_name = weight_name.replace("in_proj_q", "in_proj_qkvz")
+                cat_dim = weights[weight_name].dim() - 2
+                weights[qkvz_name] = torch.cat(
+                    (
+                        weights[weight_name],
+                        weights[k_name],
+                        weights[v_name],
+                        weights[z_name],
+                    ),
+                    cat_dim,
+                )
+                weights.pop(weight_name)
+                weights.pop(k_name)
+                weights.pop(v_name)
+                weights.pop(z_name)
+            elif "in_proj_qkvz" in weight_name and "lora_A" in weight_name:
+
+
+                ndim = weights[weight_name].dim()
+                repeat_dims = [1] * ndim
+                repeat_dims[ndim - 2] = 4
+                weights[weight_name] = weights[weight_name].repeat(*repeat_dims)
+
+
+    def normalize_gate_up_proj(
+        self, weight_names: List[str], weights: Dict[str, torch.Tensor]
+    ):
+        for weight_name in weight_names:
+            if "gate_proj" in weight_name:
+                up_name = weight_name.replace("gate_proj", "up_proj")
+                gate_up_name = weight_name.replace("gate_proj", "gate_up_proj")
+
+
+                if up_name not in weights or weights[up_name].numel() == 0:
+                    if self._is_non_gated_moe_weight(weight_name):
+
+
+                        weights[gate_up_name] = weights.pop(weight_name)
+                        if up_name in weights:
+                            weights.pop(up_name)
+                        continue
+
+
+                    weights[up_name] = torch.zeros_like(weights[weight_name])
+                cat_dim = weights[weight_name].dim() - 2
+                weights[gate_up_name] = torch.cat(
+                    (weights[weight_name], weights[up_name]), cat_dim
+                )
+                weights.pop(weight_name)
+                weights.pop(up_name)
+            elif "gate_up_proj" in weight_name:
+
+                gate_up_name = weight_name
+                if "lora_A" in weight_name:
+                    ndim = weights[gate_up_name].dim()
+                    repeat_dims = [1] * ndim
+                    repeat_dims[ndim - 2] = 2
+                    weights[gate_up_name] = weights[gate_up_name].repeat(*repeat_dims)
+
+
+    def normalize_fused_qkv_a_proj(
+        self, weight_names: List[str], weights: Dict[str, torch.Tensor]
+    ):
+
+        for weight_name in weight_names:
+            if "q_a_proj" not in weight_name:
+                continue
+            if "fused_qkv_a_proj_with_mqa" in weight_name:
+                continue
+
+            q_a_name = weight_name
+            kv_a_name = weight_name.replace("q_a_proj", "kv_a_proj_with_mqa")
+            fused_name = weight_name.replace("q_a_proj", "fused_qkv_a_proj_with_mqa")
+
+            kv_a_weight = (
+                weights[kv_a_name]
+                if kv_a_name in weights
+                else torch.zeros_like(weights[q_a_name])
+            )
+
+            weights[fused_name] = torch.cat((weights[q_a_name], kv_a_weight), dim=0)
+            weights.pop(q_a_name)
+            if kv_a_name in weights:
+                weights.pop(kv_a_name)
+
+    def pin_weights_in_cpu(self):
+        for layer in self.layers:
+            for name, weight in layer.weights.items():
+                layer.weights[name] = weight.pin_memory()
+
+        for name, weight in self.embedding_layers.items():
+            self.embedding_layers[name] = weight.pin_memory()
+
+        for name, weight in self.added_tokens_embeddings.items():
+            self.added_tokens_embeddings[name] = weight.pin_memory()

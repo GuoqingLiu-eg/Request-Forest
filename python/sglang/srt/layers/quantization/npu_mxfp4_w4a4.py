@@ -1,0 +1,109 @@
+from __future__ import annotations
+
+import logging
+from typing import Dict, List, Optional
+
+import torch
+
+from sglang.srt.layers.quantization.base_config import (
+    QuantizationConfig,
+    QuantizeMethodBase,
+)
+from sglang.srt.layers.quantization.unquant import (
+    UnquantizedFusedMoEMethod,
+    UnquantizedLinearMethod,
+)
+from sglang.srt.layers.quantization.utils import is_layer_skipped
+from sglang.srt.utils import is_npu
+
+logger = logging.getLogger(__name__)
+
+
+class Mxfp4W4A4Config(QuantizationConfig):
+
+
+    def __init__(
+        self,
+        ignored_layers: Optional[List[str]] = None,
+        packed_modules_mapping: Optional[Dict[str, str]] = None,
+    ):
+        super().__init__()
+        self.ignored_layers = ignored_layers or []
+        self.packed_modules_mapping = packed_modules_mapping or {}
+
+    @classmethod
+    def get_name(cls) -> str:
+        return "mxfp4"
+
+    @classmethod
+    def get_supported_act_dtypes(cls) -> List[torch.dtype]:
+        return [torch.bfloat16, torch.half]
+
+    @classmethod
+    def get_min_capability(cls) -> int:
+        return 0
+
+    @classmethod
+    def get_config_filenames(cls) -> List[str]:
+        return []
+
+    @classmethod
+    def from_config(cls, config: Dict) -> Mxfp4W4A4Config:
+        ignored_layers = cls.get_from_keys_or(
+            config, ["ignored_layers", "modules_to_not_convert"], None
+        )
+        if ignored_layers:
+            normalized: List[str] = []
+            for layer in ignored_layers:
+                base = layer.removeprefix("model.")
+                normalized.append(base)
+                normalized.append(f"model.{base}")
+            ignored_layers = normalized
+        packed_modules_mapping = (
+            cls.get_from_keys_or(config, ["packed_modules_mapping"], {}) or {}
+        )
+        return cls(
+            ignored_layers=ignored_layers,
+            packed_modules_mapping=packed_modules_mapping,
+        )
+
+    def get_quant_method(
+        self, layer: torch.nn.Module, prefix: str
+    ) -> Optional[QuantizeMethodBase]:
+        from sglang.srt.layers.linear import LinearBase
+        from sglang.srt.layers.moe.fused_moe_triton import FusedMoE
+
+        if isinstance(layer, LinearBase):
+            if is_layer_skipped(
+                prefix,
+                self.ignored_layers,
+                fused_mapping=self.packed_modules_mapping,
+            ):
+                return UnquantizedLinearMethod()
+            if is_npu():
+                from sglang.srt.hardware_backend.npu.quantization.linear_method_npu import (
+                    NPUDualLevelMXFP4LinearMethod,
+                )
+
+
+                return NPUDualLevelMXFP4LinearMethod(self)
+            raise NotImplementedError(
+                "mxfp4 W4A4 (single-level MXFP4 weights + activations) is currently "
+                "only implemented for the Ascend NPU backend; no CUDA/other-device "
+                "kernel exists in this config. Add a device branch here when one lands."
+            )
+        elif isinstance(layer, FusedMoE):
+
+            logger.warning(
+                "MXFP4 W4A4 quantization is not yet supported for FusedMoE layers "
+                "(prefix=%s). Falling back to unquantized MoE — MoE weights will "
+                "run in full precision (BF16/FP16).",
+                prefix,
+            )
+            return UnquantizedFusedMoEMethod(
+                layer.use_triton_kernels, layer.use_flashinfer_trtllm_moe
+            )
+        return None
+
+    def get_scaled_act_names(self) -> List[str]:
+        return []

@@ -1,0 +1,290 @@
+# Copyright 2023-2024 SGLang Team
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+
+from __future__ import annotations
+
+import logging
+from typing import List, Optional
+
+import ray
+import zmq
+
+from sglang.srt.entrypoints.engine import _calculate_rank_ranges
+from sglang.srt.layers.dp_attention import compute_dp_attention_world_info
+from sglang.srt.managers.data_parallel_controller import DataParallelController
+from sglang.srt.observability.startup_time import aggregate_scheduler_startup_times
+from sglang.srt.ray.engine import (
+    _compute_world_size,
+    _create_scheduler_actor,
+    _get_bundle_node_ip,
+    _resolve_bundle_indices,
+)
+from sglang.srt.runtime_context import (
+    get_parallel,
+)
+from sglang.srt.server_args import PortArgs, ServerArgs
+from sglang.srt.utils.network import bind_port, get_zmq_socket, get_zmq_socket_on_host
+
+logger = logging.getLogger(__name__)
+
+
+class RayDataParallelController(DataParallelController):
+
+
+    def __init__(
+        self,
+        server_args: ServerArgs,
+        port_args: PortArgs,
+        placement_group,
+        bundle_for_node: Optional[List[int]],
+        rank0_node_ip: str,
+        is_custom_pg: bool = False,
+    ):
+
+
+        self.pg = placement_group
+        self.is_custom_pg = is_custom_pg
+        self.bundle_for_node = bundle_for_node
+        self.rank0_node_ip = rank0_node_ip
+        self.scheduler_actors: List = []
+        self.event_loop_refs: List = []
+        self.startup_time = None
+
+
+        super().__init__(server_args, port_args, run_scheduler_process_func=None)
+
+    def launch_dp_schedulers(self, server_args: ServerArgs, port_args: PortArgs):
+
+        sockets = []
+        dp_port_args_list = []
+
+        for dp_rank in range(get_parallel().config.dp_size):
+            tmp_port_args = PortArgs.init_new(server_args)
+            tmp_port_args.tokenizer_ipc_name = port_args.tokenizer_ipc_name
+            tmp_port_args.detokenizer_ipc_name = port_args.detokenizer_ipc_name
+            tmp_port_args.instance_id = port_args.instance_id
+
+
+            sockets.append(bind_port(tmp_port_args.nccl_port))
+            dp_port_args_list.append(tmp_port_args)
+
+
+            if get_parallel().config.node_rank == 0:
+                self.workers[dp_rank] = get_zmq_socket(
+                    self.context,
+                    zmq.PUSH,
+                    tmp_port_args.scheduler_input_ipc_name,
+                    True,
+                )
+
+
+        for sock in sockets:
+            sock.close()
+
+
+        for dp_rank in range(get_parallel().config.dp_size):
+            self._launch_ray_tp_group(server_args, dp_port_args_list[dp_rank], dp_rank)
+
+    def launch_dp_attention_schedulers(
+        self, server_args: ServerArgs, port_args: PortArgs
+    ):
+
+
+        worker_ports = []
+        for dp_rank in range(get_parallel().config.dp_size):
+            worker_port, worker_socket = get_zmq_socket_on_host(
+                self.context, zmq.PUSH, host=self.rank0_node_ip
+            )
+            worker_ports.append(worker_port)
+            self.workers[dp_rank] = worker_socket
+            logger.debug(f"Assigned port {worker_port} to worker {dp_rank}")
+
+
+        self._launch_ray_tp_group(
+            server_args, port_args, dp_rank=None, worker_ports=worker_ports
+        )
+
+    def _launch_ray_tp_group(
+        self,
+        server_args: ServerArgs,
+        port_args: PortArgs,
+        dp_rank: Optional[int],
+        worker_ports: Optional[List[int]] = None,
+    ):
+
+        nnodes = get_parallel().config.nnodes
+        batch_start_idx = len(self.scheduler_actors)
+
+        if not self.is_custom_pg:
+            for node_idx in range(nnodes):
+                bundle_idx = self.bundle_for_node[node_idx]
+                pp_range, tp_range, pp_per_node, tp_per_node = _calculate_rank_ranges(
+                    nnodes,
+                    get_parallel().config.pp_size,
+                    get_parallel().config.tp_size,
+                    node_rank=node_idx,
+                )
+                for pp_rank in pp_range:
+                    for tp_rank in tp_range:
+                        rank_port_args = port_args
+                        actual_dp_rank = dp_rank
+
+                        local_gpu_idx = (pp_rank % pp_per_node) * tp_per_node + (
+                            tp_rank % tp_per_node
+                        )
+
+                        parallel = get_parallel().config
+                        if parallel.enable_dp_attention:
+                            _, _, actual_dp_rank, _ = compute_dp_attention_world_info(
+                                parallel.enable_dp_attention,
+                                tp_rank,
+                                parallel.tp_size,
+                                parallel.dp_size,
+                                parallel.attn_cp_size,
+                            )
+                            rank_port_args = PortArgs.init_new(
+                                server_args, actual_dp_rank, worker_ports
+                            )
+
+                            rank_port_args.nccl_port = port_args.nccl_port
+                            rank_port_args.instance_id = port_args.instance_id
+
+
+                            rank_port_args.detokenizer_ipc_name = (
+                                port_args.detokenizer_ipc_name
+                            )
+                            rank_port_args.tokenizer_ipc_name = (
+                                port_args.tokenizer_ipc_name
+                            )
+
+                        dist_init_addr = (
+                            f"{self.rank0_node_ip}:{rank_port_args.nccl_port}"
+                        )
+
+                        actor = _create_scheduler_actor(
+                            pg=self.pg,
+                            bundle_idx=bundle_idx,
+                            gpu_id=local_gpu_idx,
+                            server_args=server_args,
+                            port_args=rank_port_args,
+                            tp_rank=tp_rank,
+                            pp_rank=pp_rank,
+                            dp_rank=actual_dp_rank,
+                            dist_init_addr=dist_init_addr,
+                            rank0_node_ip=self.rank0_node_ip,
+                        )
+                        self.scheduler_actors.append(actor)
+
+        else:
+            world_size = _compute_world_size()
+            bundle_indices = _resolve_bundle_indices(self.pg, world_size)
+
+            parallel = get_parallel().config
+            ranks_per_tp_group = parallel.tp_size * parallel.pp_size
+            if dp_rank is not None:
+                start_rank = dp_rank * ranks_per_tp_group
+                end_rank = start_rank + ranks_per_tp_group
+
+
+                local_rank0_bundle_idx = bundle_indices[start_rank]
+                local_rank0_node_ip = _get_bundle_node_ip(
+                    self.pg, local_rank0_bundle_idx
+                )
+            else:
+                start_rank = 0
+                end_rank = world_size
+                local_rank0_node_ip = self.rank0_node_ip
+
+            for global_rank in range(start_rank, end_rank):
+                local_rank = global_rank % ranks_per_tp_group
+                pp_rank = local_rank // parallel.tp_size
+                tp_rank = local_rank % parallel.tp_size
+                rank_port_args = port_args
+                actual_dp_rank = dp_rank
+
+                bundle_idx = bundle_indices[global_rank]
+
+                if get_parallel().config.enable_dp_attention:
+                    _, _, actual_dp_rank, _ = compute_dp_attention_world_info(
+                        get_parallel().config.enable_dp_attention,
+                        tp_rank,
+                        get_parallel().config.tp_size,
+                        get_parallel().config.dp_size,
+                        get_parallel().config.attn_cp_size,
+                    )
+                    rank_port_args = PortArgs.init_new(
+                        server_args, actual_dp_rank, worker_ports
+                    )
+                    rank_port_args.nccl_port = port_args.nccl_port
+                    rank_port_args.detokenizer_ipc_name = port_args.detokenizer_ipc_name
+                    rank_port_args.tokenizer_ipc_name = port_args.tokenizer_ipc_name
+
+                dist_init_addr = f"{local_rank0_node_ip}:{rank_port_args.nccl_port}"
+
+                actor = _create_scheduler_actor(
+                    pg=self.pg,
+                    bundle_idx=bundle_idx,
+                    gpu_id=0,
+                    server_args=server_args,
+                    port_args=rank_port_args,
+                    tp_rank=tp_rank,
+                    pp_rank=pp_rank,
+                    dp_rank=actual_dp_rank,
+                    dist_init_addr=dist_init_addr,
+                    rank0_node_ip=local_rank0_node_ip,
+                )
+                self.scheduler_actors.append(actor)
+
+
+        batch_actors = self.scheduler_actors[batch_start_idx:]
+        try:
+            scheduler_infos = ray.get(
+                [actor.get_info.remote() for actor in batch_actors]
+            )
+        except ray.exceptions.RayActorError as e:
+            for actor in self.scheduler_actors:
+                try:
+                    ray.kill(actor)
+                except Exception:
+                    logger.error(f"Failed to kill Ray scheduler actor: {actor}")
+            raise RuntimeError(f"Scheduler actor failed to initialize: {e}")
+
+
+        if scheduler_infos:
+            self.max_total_num_tokens = scheduler_infos[0]["max_total_num_tokens"]
+            self.max_req_input_len = scheduler_infos[0]["max_req_input_len"]
+            self.startup_time = aggregate_scheduler_startup_times(
+                [self.startup_time]
+                + [info.get("startup_time") for info in scheduler_infos]
+            )
+
+
+        self.event_loop_refs.extend(
+            [actor.run_event_loop.remote() for actor in batch_actors]
+        )
+
+
+    def launch_tensor_parallel_group(
+        self,
+        server_args: ServerArgs,
+        port_args: PortArgs,
+        base_gpu_id: int,
+        dp_rank: Optional[int],
+        worker_ports: Optional[List[int]] = None,
+    ):
+        raise RuntimeError(
+            "RayDataParallelController should not call launch_tensor_parallel_group. "
+            "Use _launch_ray_tp_group instead."
+        )

@@ -1,0 +1,21 @@
+{
+  "release": "Request Forest source release",
+  "export_date": "2026-10-11",
+  "source_commit": "4563778e5033dffb81b9aa50e91c7c8397713345",
+  "upstream_base_commit": "f8cc1f9525c3a0bf3b14480cc76eccb79db1b4ea",
+  "source_archive": "request_forest_core.tar.gz",
+  "runtime_source": "source/package/rf-sglang",
+  "native_source": "source/production",
+  "profiles": ["qwen3.6", "qwen3.8", "ornith"],
+  "historical_package_provenance": "docs/ORIGINAL_PACKAGE_PROVENANCE.json",
+  "packaging_changes": [
+    "Use the archived serving package as the repository root.",
+    "Add eight native build, registration, CPU/CUDA, and header source files at their original relative paths.",
+    "Retain upstream licenses and third-party source notices.",
+    "Replace the release README with source-build instructions and preserve the historical README under docs.",
+    "Exclude historical local edits, duplicate source trees, internal archive diagnostics, model weights, datasets, results, and compiled artifacts."
+  ],
+  "validation_scope": "Static source parsing, native source path checks, and launcher dry-run; no dependency installation, native compilation, or model inference rerun.",
+  "precompiled_libraries_included": false,
+  "historical_benchmark_runner_included": false
+}

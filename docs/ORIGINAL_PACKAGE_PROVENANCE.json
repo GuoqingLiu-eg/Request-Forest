@@ -1,0 +1,104 @@
+{
+  "source_commit": "4563778e5033dffb81b9aa50e91c7c8397713345",
+  "upstream_base_commit": "f8cc1f9525c3a0bf3b14480cc76eccb79db1b4ea",
+  "distribution": "Shared RF text-serving runtime with existing precompiled native operators",
+  "profiles": {
+    "qwen3.6": {
+      "sources": [
+        "release/qwen3.6/server.yaml",
+        "results/adaptive-rf-opt-20260926/launch_qwen36_patch.sh"
+      ],
+      "prefill_coalesce_quiet_ms": 4
+    },
+    "qwen3.8": {
+      "sources": [
+        "release/qwen3.8/server.yaml",
+        "results/adaptive-rf-opt-20260926/launch_qwen38_bf16.sh"
+      ],
+      "prefill_coalesce_quiet_ms": 0
+    },
+    "ornith": {
+      "sources": [
+        "results/adaptive-rf-opt-20260926/launch_ornith_bf16.sh"
+      ],
+      "prefill_coalesce_quiet_ms": 0
+    }
+  },
+  "native_binaries": [
+    {
+      "path": "native/request_forest_native_cpu.so",
+      "bytes": 201976,
+      "sha256": "f855c0a01f538ca059c775bb672252e031d697076fda12b13a579a6cff9c6fd5"
+    },
+    {
+      "path": "native/request_forest_native_cuda.so",
+      "bytes": 271664,
+      "sha256": "b4518f43a8ccab3f39fdbcb732280a3581b424c077487a5c9f95a26c28bde63e"
+    }
+  ],
+  "native_compatibility": {
+    "platform": "Linux x86-64",
+    "python_validated": "3.12",
+    "torch_validated": "2.13.0+cu130",
+    "cuda": "13",
+    "gpu_architecture": "sm_120",
+    "ptx_fallback": false
+  },
+  "packaging_changes": [
+    "Removed explanatory comments and docstrings; retained license notices, directives and runtime-consumed documentation.",
+    "Added standalone Python packaging metadata and a shared launcher with three model profiles.",
+    "Excluded standalone tests, benchmarks, experiments, generated caches, Rust/gRPC build and AOT kernel build sources.",
+    "Reused the measured CPU and CUDA RF libraries; renamed the CUDA library file without changing its bytes.",
+    "Included an optional isolated FlashInfer 0.6.17 planning patch helper.",
+    "Trimmed trailing whitespace outside multiline literals; Python AST, JSON values and C/CUDA tokens were checked unchanged."
+  ],
+  "validation": {
+    "source_ast_and_compilation": true,
+    "isolated_install_with_existing_dependencies": true,
+    "server_cli_help": true,
+    "native_operator_registration_count": 8,
+    "launcher_profiles": [
+      "qwen3.6",
+      "qwen3.8",
+      "ornith"
+    ],
+    "native_compilation_performed": false,
+    "model_inference_rerun": false,
+    "flashinfer_isolated_patch_and_idempotence": true,
+    "shared_flashinfer_unchanged": true,
+    "final_editable_install_and_cli": true
+  },
+  "benchmark_runner": {
+    "source_protocol": "results/adaptive-rf-opt-20260926/ornith_live_task_sweep.py",
+    "client_and_data_source": "src/sglang-extension-measurements-20260913/benchmark/request_forest",
+    "suites": [
+      "gsm8k",
+      "math500",
+      "humaneval",
+      "mtbench"
+    ],
+    "concurrency": [
+      64,
+      80,
+      96,
+      112,
+      128,
+      144,
+      160,
+      176,
+      192,
+      224,
+      240,
+      256
+    ],
+    "memory_fraction": 0.8,
+    "server_max_running_requests": 256,
+    "conversations_per_cell": "4 * B",
+    "max_new_tokens": 4096,
+    "seed": 42,
+    "temperature": 0,
+    "ignore_eos": false,
+    "enable_thinking": false,
+    "validation": "Static syntax and CLI/dry-run argument checks only; no server launch, inference, dataset download, or native compilation."
+  }
+}

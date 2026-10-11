@@ -1,0 +1,27 @@
+from fastapi import HTTPException
+
+
+_HEADER_OVERRIDES = {
+    "x-override-rid": ("rid", str),
+    "x-override-bootstrap-host": ("bootstrap_host", str),
+    "x-override-bootstrap-port": ("bootstrap_port", int),
+    "x-override-bootstrap-room": ("bootstrap_room", int),
+    "x-override-conversation-id": ("conversation_id", str),
+    "x-override-routed-dp-rank": ("routed_dp_rank", int),
+    "x-override-disagg-prefill-dp-rank": ("disagg_prefill_dp_rank", int),
+    "x-override-priority": ("priority", int),
+}
+
+
+def apply_header_overrides(obj, headers) -> None:
+
+    for header, (attr, cast) in _HEADER_OVERRIDES.items():
+        value = headers.get(header)
+        if value is None:
+            continue
+        try:
+            setattr(obj, attr, cast(value))
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400, detail=f"invalid {header} header {value!r}: {e}"
+            ) from e

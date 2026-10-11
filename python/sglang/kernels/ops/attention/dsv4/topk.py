@@ -1,0 +1,107 @@
+from __future__ import annotations
+
+from typing import Optional
+
+import torch
+
+from sglang.kernels.jit.utils import (
+    cache_once,
+    is_arch_support_pdl,
+    is_hip_runtime,
+    load_jit,
+    make_cpp_args,
+)
+
+from .utils import make_name
+
+
+@cache_once
+def _jit_topk_v1_module():
+
+
+    args = make_cpp_args(is_arch_support_pdl())
+    return load_jit(
+        make_name("topk_v1"),
+        *args,
+        cuda_files=["deepseek_v4/topk_v1.cuh"],
+        cuda_wrappers=[("topk_transform", f"TopKKernel<{args}>::transform")],
+    )
+
+
+@cache_once
+def _jit_topk_v2_module():
+
+
+    return load_jit(
+        make_name("topk_v2"),
+        cuda_files=["deepseek_v4/topk_v2.cuh"],
+        cuda_wrappers=[
+            ("topk_transform_paged", "TopKKernel::transform_paged"),
+            ("topk_transform_ragged", "TopKKernel::transform_ragged"),
+            ("topk_plan", "TopKKernel::plan"),
+        ],
+    )
+
+
+def topk_transform_512(
+    scores: torch.Tensor,
+    seq_lens: torch.Tensor,
+    page_tables: torch.Tensor,
+    out_page_indices: torch.Tensor,
+    page_size: int,
+    out_raw_indices: Optional[torch.Tensor] = None,
+) -> None:
+    if is_hip_runtime():
+        torch.ops.sgl_kernel.deepseek_v4_topk_transform_512(
+            scores, seq_lens, page_tables, out_page_indices, page_size, out_raw_indices
+        )
+    else:
+        module = _jit_topk_v1_module()
+        module.topk_transform(
+            scores, seq_lens, page_tables, out_page_indices, page_size, out_raw_indices
+        )
+
+
+_PLAN_METADATA_INTS_PER_BATCH = 2
+
+
+def plan_topk_v2(seq_lens: torch.Tensor, static_threshold: int = 0) -> torch.Tensor:
+
+    module = _jit_topk_v2_module()
+    bs = seq_lens.shape[0]
+    metadata = seq_lens.new_empty(bs + 1, _PLAN_METADATA_INTS_PER_BATCH)
+    module.topk_plan(seq_lens, metadata, static_threshold)
+    return metadata
+
+
+def topk_transform_ragged_v2(
+    scores: torch.Tensor,
+    seq_lens: torch.Tensor,
+    *,
+    out_offsets: torch.Tensor,
+    out_indices: torch.Tensor,
+    row_starts: Optional[torch.Tensor] = None,
+) -> None:
+
+    module = _jit_topk_v2_module()
+    module.topk_transform_ragged(scores, seq_lens, row_starts, out_offsets, out_indices)
+
+
+def topk_transform_512_v2(
+    scores: torch.Tensor,
+    seq_lens: torch.Tensor,
+    page_tables: Optional[torch.Tensor],
+    out_page_indices: torch.Tensor,
+    page_size: int,
+    metadata: torch.Tensor,
+) -> None:
+
+    module = _jit_topk_v2_module()
+    module.topk_transform_paged(
+        scores,
+        seq_lens,
+        page_tables,
+        out_page_indices,
+        page_size,
+        metadata,
+    )
