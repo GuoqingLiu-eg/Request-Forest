@@ -6,16 +6,28 @@
   "source_archive": "request_forest_core.tar.gz",
   "runtime_source": "source/package/rf-sglang",
   "native_source": "source/production",
-  "profiles": ["qwen3.6", "qwen3.8", "ornith"],
+  "profiles": [
+    "qwen3.6",
+    "qwen3.8",
+    "ornith"
+  ],
   "historical_package_provenance": "docs/ORIGINAL_PACKAGE_PROVENANCE.json",
   "packaging_changes": [
     "Use the archived serving package as the repository root.",
     "Add eight native build, registration, CPU/CUDA, and header source files at their original relative paths.",
     "Retain upstream licenses and third-party source notices.",
     "Replace the release README with source-build instructions and preserve the historical README under docs.",
-    "Exclude historical local edits, duplicate source trees, internal archive diagnostics, model weights, datasets, results, and compiled artifacts."
+    "Exclude historical local edits, duplicate source trees, internal archive diagnostics, model weights, datasets, results, and compiled artifacts.",
+    "Restore the final 2026-09-28 project homepage and six paper figure assets; move source-build instructions to docs/INSTALL.md."
   ],
   "validation_scope": "Static source parsing, native source path checks, and launcher dry-run; no dependency installation, native compilation, or model inference rerun.",
   "precompiled_libraries_included": false,
-  "historical_benchmark_runner_included": false
+  "historical_benchmark_runner_included": false,
+  "homepage": {
+    "source": "Final homepage README and figures from 2026-09-28",
+    "original_repository": "liuguoqingdq/Request-Forest",
+    "original_commit_short": "6a9b4a9",
+    "preserved": "Final title, navigation, method/results descriptions and all three PNG/PDF figures",
+    "adaptations": "Installation links, source-build instructions, benchmark availability and repository paths updated for this source release"
+  }
 }
